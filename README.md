@@ -5,7 +5,7 @@ A small c testing framework. Goal below 500 lines of code
 ## TODO:
 
 - [ ] More test definitions `PENDING`
-- [ ] Assert more than just int
+- [x] Assert more than just int
 - [ ] When filtering it will still say the full filter count at the beginning
 - [ ] Auto register TEST, no idea how. Good Luck to myself
 - [ ] Easy multifile support
