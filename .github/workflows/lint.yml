@@ -1,0 +1,14 @@
+name: Style checking
+
+on: [push, pull_request]
+
+jobs:
+  format:
+    name: Format
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: Prepare
+        run: sudo apt-get update && sudo apt-get install clang-format
+      - name: Format
+        run: make format

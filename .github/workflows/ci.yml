@@ -1,0 +1,30 @@
+name: Build
+
+on: [push, pull_request]
+
+jobs:
+  gcc:
+    name: gcc
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, macos-10.15]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: CC=/usr/bin/gcc make
+      - name: Test
+        run: LD_LIBRARY_PATH=${PWD}/build:${LD_LIBRARY_PATH} ./build/test
+
+  clang:
+    name: clang
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04, macos-10.15]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build
+        run: CC=/usr/bin/clang make
+      - name: Test
+        run: LD_LIBRARY_PATH=${PWD}/build:${LD_LIBRARY_PATH} ./build/test
