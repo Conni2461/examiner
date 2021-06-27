@@ -2,40 +2,47 @@
 #define EXAMINER_H
 
 #include <setjmp.h>
+#include <stddef.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
+
+typedef void (*exam_test_fn)(const char *);
 
 typedef struct {
   const char *filter;
-  void **tests;
-  size_t test_count;
 } exam_env;
 
-#define DUMP_BOOL(x) x ? "true" : "false"
+typedef struct {
+  exam_test_fn fn;
+  const char *scope;
+  const char *name;
+  bool pending;
+} exam_test_t;
 
-#define TEST(namespace, test_name, y)                                          \
-  bool namespace##_##test_name(const char *filter) {                           \
-    const char *__internal_test_name = #namespace "." #test_name;              \
-    if (filter) {                                                              \
-      if (strcmp(filter, __internal_test_name) != 0) {                         \
-        return false;                                                          \
-      }                                                                        \
-    }                                                                          \
-                                                                               \
-    printf("\e[90m[ RUN      ] \e[1m%s\e[0m\n", __internal_test_name);         \
-    y;                                                                         \
-    printf("\e[32m[       OK ] %s\e[0m\n", __internal_test_name);              \
-    return true;                                                               \
-  }
+typedef struct {
+  exam_test_t *tests;
+  size_t len;
+  size_t cap;
+} exam_test_list_t;
 
-exam_env _exam_init(int argc, char **argv, void *tests[], size_t count);
-int _exam_run(const exam_env *env);
+exam_env exam_init(int argc, char **argv);
+int exam_run(const exam_env *env);
+void _exam_register_test(const char *scope, const char *name, exam_test_fn fn,
+                         bool pending);
 
-#define exam_init(argc, argv, array)                                           \
-  _exam_init(argc, argv, array, sizeof(array) / sizeof(array[0]))
-#define exam_run(env) _exam_run(env)
+#define __REGISTER_TEST(SCOPE, NAME, PENDING)                                  \
+  void examtest_##SCOPE##_##NAME(const char *__internal_test_name);            \
+  void examtest_##SCOPE##_##NAME##_register() __attribute__((constructor));    \
+  void examtest_##SCOPE##_##NAME##_register() {                                \
+    _exam_register_test(#SCOPE, #NAME, &examtest_##SCOPE##_##NAME, PENDING);   \
+  }                                                                            \
+  void examtest_##SCOPE##_##NAME(const char *__internal_test_name)
 
+#define TEST(SCOPE, NAME) __REGISTER_TEST(SCOPE, NAME, false)
+#define PENDING(SCOPE, NAME) __REGISTER_TEST(SCOPE, NAME, true)
+
+/////////////
+// ASSERTS //
+/////////////
 void _exam_assert_equal_double(double expected, double result,
                                const char *test_name, const char *file,
                                int line);
@@ -111,7 +118,5 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
 #define ASSERT_NOT_EQUAL_MEM(expected, result, len)                            \
   _exam_assert_not_equal_mem(expected, result, len, __internal_test_name,      \
                              __FILE__, __LINE__)
-
-// TODO(conni2461): NOT equal
 
 #endif // EXAMINER_H

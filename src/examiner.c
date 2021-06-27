@@ -1,44 +1,109 @@
 #include "examiner.h"
 
-#include "math.h"
-#include "string.h"
+#include <math.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 const static double EPSILON = 0.0001;
 
 static sigjmp_buf global_env;
+static exam_test_list_t global_tests = {0};
 
-exam_env _exam_init(int argc, char **argv, void *tests[], size_t count) {
+static char *exam_concat_scope_name(const exam_test_t *test) {
+  size_t buf_len = strlen(test->scope) + strlen(test->name) + 2;
+  char *buf = malloc(sizeof(char) * buf_len);
+  memset(buf, 0, buf_len);
+  strcat(buf, test->scope);
+  strcat(buf, ".");
+  strcat(buf, test->name);
+
+  return buf;
+}
+
+static bool exam_filter_test(const char *name, const char *filter) {
+  int i = 0;
+  while (true) {
+    if (filter[i] == '\0') {
+      break;
+    }
+    if (name[i] != filter[i]) {
+      return false;
+    }
+    i++;
+  }
+  return true;
+}
+
+exam_env exam_init(int argc, char **argv) {
   const char *filter = NULL;
   if (argc == 3) {
     if (strncmp(argv[1], "--filter", 8) == 0) {
       filter = argv[2];
     }
   }
-  return (exam_env){.filter = filter, .tests = tests, .test_count = count};
+  return (exam_env){.filter = filter};
 }
 
-int _exam_run(const exam_env *env) {
+int exam_run(const exam_env *env) {
   int retValue = 0;
-  size_t final_count = env->test_count, passed = 0;
-
-  printf("\e[90m[==========] Running %zu test(s)\e[0m\n", env->test_count);
-  for (size_t i = 0; i < env->test_count; ++i) {
-    if (sigsetjmp(global_env, 1) == 0) {
-      bool ran = ((bool (*)(const char *))env->tests[i])(env->filter);
-      if (!ran) {
-        --final_count;
-      } else {
-        ++passed;
+  size_t count = 0, passed = 0;
+  if (env->filter != NULL) {
+    for (size_t i = 0; i < global_tests.len; ++i) {
+      char *buf = exam_concat_scope_name(&global_tests.tests[i]);
+      if (exam_filter_test(buf, env->filter)) {
+        ++count;
       }
+      free(buf);
+    }
+  } else {
+    count = global_tests.len;
+  }
+
+  printf("\e[90m[==========] Running %zu test(s)\e[0m\n", count);
+  for (size_t i = 0; i < global_tests.len; ++i) {
+    char *buf = exam_concat_scope_name(&global_tests.tests[i]);
+    if (env->filter != NULL && !exam_filter_test(buf, env->filter)) {
+      free(buf);
+      continue;
+    }
+    if (global_tests.tests[i].pending) {
+      printf("\e[34m[ PENDING  ] \e[1m%s\e[0m\n", buf);
+      free(buf);
+      continue;
+    }
+    if (sigsetjmp(global_env, 1) == 0) {
+      printf("\e[90m[ RUN      ] \e[1m%s\e[0m\n", buf);
+      global_tests.tests[i].fn(buf);
+      ++passed;
+      printf("\e[32m[       OK ] %s\e[0m\n", buf);
     } else {
       retValue = 1;
     }
+    free(buf);
   }
 
   printf("\e[32m[  PASSED  ] %zu test(s)\e[0m\n", passed);
-  printf("\e[90m[==========] Ran %zu test(s)\e[0m\n", final_count);
+  printf("\e[90m[==========] Ran %zu test(s)\e[0m\n", count);
 
   return retValue;
+}
+
+void _exam_register_test(const char *scope, const char *name, exam_test_fn fn,
+                         bool pending) {
+  if (global_tests.tests == NULL) {
+    global_tests.tests = malloc(sizeof(exam_test_list_t) * 16);
+    global_tests.len = 0;
+    global_tests.cap = 16;
+  } else {
+    if (global_tests.len + 1 >= global_tests.cap) {
+      global_tests.cap *= 2;
+      global_tests.tests = realloc(global_tests.tests, global_tests.cap);
+    }
+  }
+
+  global_tests.tests[global_tests.len++] =
+      (exam_test_t){.fn = fn, .scope = scope, .name = name, .pending = pending};
 }
 
 void _exam_assert_equal_double(double expected, double result,
