@@ -16,15 +16,16 @@ For now take a look at `test/examiner_test.c` but note this is not yet done.
 - [x] `--filter` needs substr matching so i can only run one namespace
 - [x] timer how loong the execution of a test took
 - [ ] separator between namespaces (either a `\n` or `string.rep(78, '-')`
+  - [ ] better grouping even if they are not sorted in the file.
+        (scope grouping)
 - [ ] Documentation
   - [ ] Guide in github
-  - [ ] `--help`
+  - [x] `--help`
   - [ ] man page
-  - [ ] header documentation
-- [ ] enable/disable color. on / off / auto
-- [ ] `--list-tests`
+- [x] enable/disable color. on / off
+- [x] `--list-tests`
 - [ ] `--short`
 - [ ] `--shuffle` test order
-- [ ] `--repeat` run tests multiple times
+- [x] `--repeat` run tests multiple times
 - [ ] `--die-on-failure` stop executing on fail
 - [ ] make install
