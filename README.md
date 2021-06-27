@@ -27,5 +27,5 @@ For now take a look at `test/examiner_test.c` but note this is not yet done.
 - [ ] `--short`
 - [ ] `--shuffle` test order
 - [x] `--repeat` run tests multiple times
-- [ ] `--die-on-failure` stop executing on fail
+- [x] `--die-on-failure` stop executing on fail
 - [ ] make install

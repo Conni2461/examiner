@@ -2,7 +2,7 @@ TARGET ?= libexaminer.so
 
 BUILD_DIR ?= ./build
 
-CFLAGS ?= -Wall -Werror -fpic
+CFLAGS ?= -Wall -Werror -fpic -Wshadow -Wconversion
 TYPE ?= -Og -ggdb3
 
 all: $(BUILD_DIR)/$(TARGET) $(BUILD_DIR)/test

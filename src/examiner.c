@@ -187,7 +187,7 @@ int exam_run(const exam_env_t *env) {
     if (sigsetjmp(global_env, 1) == 0) {
       printf("%s[ RUN      ] %s%s\n", GRAY, NONE, buf);
       double diff;
-      for (size_t i = 0; i < env->repeat; i++) {
+      for (size_t j = 0; j < env->repeat; j++) {
         clock_t start = clock();
         global_tests.tests[i].fn(env);
         clock_t end = clock();
@@ -198,6 +198,9 @@ int exam_run(const exam_env_t *env) {
     } else {
       printf("%s[  FAILED  ] %s%s\n", RED, NONE, buf);
       retValue = 1;
+      if (env->die_on_fail) {
+        exit(1);
+      }
     }
     free(buf);
   }
