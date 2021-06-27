@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 
 const static double EPSILON = 0.0001;
 
@@ -68,16 +69,20 @@ int exam_run(const exam_env *env) {
       continue;
     }
     if (global_tests.tests[i].pending) {
-      printf("\e[34m[ PENDING  ] \e[1m%s\e[0m\n", buf);
+      printf("\e[34m[ PENDING  ] \e[0m%s\n", buf);
       free(buf);
       continue;
     }
     if (sigsetjmp(global_env, 1) == 0) {
-      printf("\e[90m[ RUN      ] \e[1m%s\e[0m\n", buf);
-      global_tests.tests[i].fn(buf);
+      printf("\e[90m[ RUN      ] \e[0m%s\n", buf);
+      clock_t start = clock();
+      global_tests.tests[i].fn();
+      clock_t end = clock();
       ++passed;
-      printf("\e[32m[       OK ] %s\e[0m\n", buf);
+      printf("\e[32m[       OK ]\e[0m %s [%f s]\n", buf,
+             ((double)(end - start)) / CLOCKS_PER_SEC);
     } else {
+      printf("\e[31m[  FAILED  ]\e[0m %s\n", buf);
       retValue = 1;
     }
     free(buf);
@@ -106,50 +111,44 @@ void _exam_register_test(const char *scope, const char *name, exam_test_fn fn,
       (exam_test_t){.fn = fn, .scope = scope, .name = name, .pending = pending};
 }
 
-void _exam_assert_equal_double(double expected, double result,
-                               const char *test_name, const char *file,
+void _exam_assert_equal_double(double expected, double result, const char *file,
                                int line) {
   if (fabs(expected - result) >= EPSILON) {
-    printf("\e[31m[  FAILED  ] %s\e[0m\n", test_name);
-    printf("Error at line: %s:%d\n", file, line);
-    printf("\e[32mExpected: %f \e[31mResult: %f\e[0m\n", expected, result);
+    printf("  Error at line: %s:%d\n", file, line);
+    printf("  \e[32mExpected: %f \e[31mResult: %f\e[0m\n", expected, result);
     siglongjmp(global_env, 1);
   }
 }
 
-void _exam_assert_equal_float(float expected, float result,
-                              const char *test_name, const char *file,
+void _exam_assert_equal_float(float expected, float result, const char *file,
                               int line) {
   if (fabs(expected - result) >= EPSILON) {
-    printf("\e[31m[  FAILED  ] %s\e[0m\n", test_name);
-    printf("Error at line: %s:%d\n", file, line);
-    printf("\e[32mExpected: %f \e[31mResult: %f\e[0m\n", expected, result);
+    printf("  Error at line: %s:%d\n", file, line);
+    printf("  \e[32mExpected: %f \e[31mResult: %f\e[0m\n", expected, result);
     siglongjmp(global_env, 1);
   }
 }
 
-void _exam_assert_equal_int(int expected, int result, const char *test_name,
-                            const char *file, int line) {
+void _exam_assert_equal_int(int expected, int result, const char *file,
+                            int line) {
   if (expected != result) {
-    printf("\e[31m[  FAILED  ] %s\e[0m\n", test_name);
-    printf("Error at line: %s:%d\n", file, line);
-    printf("\e[32mExpected: %d \e[31mResult: %d\e[0m\n", expected, result);
+    printf("  Error at line: %s:%d\n", file, line);
+    printf("  \e[32mExpected: %d \e[31mResult: %d\e[0m\n", expected, result);
     siglongjmp(global_env, 1);
   }
 }
 
 void _exam_assert_equal_str(const char *expected, const char *result,
-                            const char *test_name, const char *file, int line) {
+                            const char *file, int line) {
   if (strcmp(expected, result) != 0) {
-    printf("\e[31m[  FAILED  ] %s\e[0m\n", test_name);
-    printf("Error at line: %s:%d\n", file, line);
-    printf("\e[32mExpected: %s \e[31mResult: %s\e[0m\n", expected, result);
+    printf("  Error at line: %s:%d\n", file, line);
+    printf("  \e[32mExpected: %s \e[31mResult: %s\e[0m\n", expected, result);
     siglongjmp(global_env, 1);
   }
 }
 
 void _exam_assert_equal_mem(void *expected, void *result, size_t len,
-                            const char *test_name, const char *file, int line) {
+                            const char *file, int line) {
   const char *a = (const char *)expected;
   const char *b = (const char *)result;
 
@@ -160,19 +159,18 @@ void _exam_assert_equal_mem(void *expected, void *result, size_t len,
     if (l != r) {
       if (differences < 16) {
         if (differences == 0) {
-          printf("\e[31m[  FAILED  ] %s\e[0m\n", test_name);
-          printf("Error at line: %s:%d\n", file, line);
+          printf("  Error at line: %s:%d\n", file, line);
         }
-        printf("difference at offset %zd 0x%02x != 0x%02x\n", i, l, r);
+        printf("  difference at offset %zd 0x%02x != 0x%02x\n", i, l, r);
       }
       differences++;
     }
   }
   if (differences > 0) {
     if (differences >= 16) {
-      printf("...\n");
+      printf("  ...\n");
     }
-    printf("%zd bytes of %p and %p are different\n", differences, (void *)a,
+    printf("  %zd bytes of %p and %p are different\n", differences, (void *)a,
            (void *)b);
 
     siglongjmp(global_env, 1);
@@ -180,51 +178,43 @@ void _exam_assert_equal_mem(void *expected, void *result, size_t len,
 }
 
 void _exam_assert_not_equal_double(double expected, double result,
-                                   const char *test_name, const char *file,
-                                   int line) {
+                                   const char *file, int line) {
   if (fabs(expected - result) < EPSILON) {
-    printf("\e[31m[  FAILED  ] %s\e[0m\n", test_name);
-    printf("Error at line: %s:%d\n", file, line);
-    printf("\e[32mExpected: %f \e[31mResult: %f\e[0m\n", expected, result);
+    printf("  Error at line: %s:%d\n", file, line);
+    printf("  \e[32mExpected: %f \e[31mResult: %f\e[0m\n", expected, result);
     siglongjmp(global_env, 1);
   }
 }
 
 void _exam_assert_not_equal_float(float expected, float result,
-                                  const char *test_name, const char *file,
-                                  int line) {
+                                  const char *file, int line) {
   if (fabs(expected - result) < EPSILON) {
-    printf("\e[31m[  FAILED  ] %s\e[0m\n", test_name);
-    printf("Error at line: %s:%d\n", file, line);
-    printf("\e[32mExpected: %f \e[31mResult: %f\e[0m\n", expected, result);
+    printf("  Error at line: %s:%d\n", file, line);
+    printf("  \e[32mExpected: %f \e[31mResult: %f\e[0m\n", expected, result);
     siglongjmp(global_env, 1);
   }
 }
 
-void _exam_assert_not_equal_int(int expected, int result, const char *test_name,
-                                const char *file, int line) {
+void _exam_assert_not_equal_int(int expected, int result, const char *file,
+                                int line) {
   if (expected == result) {
-    printf("\e[31m[  FAILED  ] %s\e[0m\n", test_name);
-    printf("Error at line: %s:%d\n", file, line);
-    printf("\e[32mExpected: %d \e[31mResult: %d\e[0m\n", expected, result);
+    printf("  Error at line: %s:%d\n", file, line);
+    printf("  \e[32mExpected: %d \e[31mResult: %d\e[0m\n", expected, result);
     siglongjmp(global_env, 1);
   }
 }
 
 void _exam_assert_not_equal_str(const char *expected, const char *result,
-                                const char *test_name, const char *file,
-                                int line) {
+                                const char *file, int line) {
   if (strcmp(expected, result) == 0) {
-    printf("\e[31m[  FAILED  ] %s\e[0m\n", test_name);
-    printf("Error at line: %s:%d\n", file, line);
-    printf("\e[32mExpected: %s \e[31mResult: %s\e[0m\n", expected, result);
+    printf("  Error at line: %s:%d\n", file, line);
+    printf("  \e[32mExpected: %s \e[31mResult: %s\e[0m\n", expected, result);
     siglongjmp(global_env, 1);
   }
 }
 
 void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
-                                const char *test_name, const char *file,
-                                int line) {
+                                const char *file, int line) {
   const char *a = (const char *)expected;
   const char *b = (const char *)result;
 
@@ -235,19 +225,18 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
     if (l == r) {
       if (differences < 16) {
         if (differences == 0) {
-          printf("\e[31m[  FAILED  ] %s\e[0m\n", test_name);
-          printf("Error at line: %s:%d\n", file, line);
+          printf("  Error at line: %s:%d\n", file, line);
         }
-        printf("same at offset %zd 0x%02x != 0x%02x\n", i, l, r);
+        printf("  same at offset %zd 0x%02x != 0x%02x\n", i, l, r);
       }
       differences++;
     }
   }
   if (differences > 0) {
     if (differences >= 16) {
-      printf("...\n");
+      printf("  ...\n");
     }
-    printf("%zd bytes of %p and %p are same\n", differences, (void *)a,
+    printf("  %zd bytes of %p and %p are same\n", differences, (void *)a,
            (void *)b);
 
     siglongjmp(global_env, 1);

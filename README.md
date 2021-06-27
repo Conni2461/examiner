@@ -14,6 +14,7 @@ For now take a look at `test/examiner_test.c` but note this is not yet done.
 - [x] Auto register TEST, no idea how. Good Luck to myself
 - [ ] Easy multifile support
 - [x] `--filter` needs substr matching so i can only run one namespace
+- [x] timer how loong the execution of a test took
 - [ ] separator between namespaces (either a `\n` or `string.rep(78, '-')`
 - [ ] Documentation
   - [ ] Guide in github

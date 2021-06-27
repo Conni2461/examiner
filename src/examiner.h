@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include <stdbool.h>
 
-typedef void (*exam_test_fn)(const char *);
+typedef void (*exam_test_fn)();
 
 typedef struct {
   const char *filter;
@@ -30,12 +30,12 @@ void _exam_register_test(const char *scope, const char *name, exam_test_fn fn,
                          bool pending);
 
 #define __REGISTER_TEST(SCOPE, NAME, PENDING)                                  \
-  void examtest_##SCOPE##_##NAME(const char *__internal_test_name);            \
+  void examtest_##SCOPE##_##NAME();                                            \
   void examtest_##SCOPE##_##NAME##_register() __attribute__((constructor));    \
   void examtest_##SCOPE##_##NAME##_register() {                                \
     _exam_register_test(#SCOPE, #NAME, &examtest_##SCOPE##_##NAME, PENDING);   \
   }                                                                            \
-  void examtest_##SCOPE##_##NAME(const char *__internal_test_name)
+  void examtest_##SCOPE##_##NAME()
 
 #define TEST(SCOPE, NAME) __REGISTER_TEST(SCOPE, NAME, false)
 #define PENDING(SCOPE, NAME) __REGISTER_TEST(SCOPE, NAME, true)
@@ -43,18 +43,16 @@ void _exam_register_test(const char *scope, const char *name, exam_test_fn fn,
 /////////////
 // ASSERTS //
 /////////////
-void _exam_assert_equal_double(double expected, double result,
-                               const char *test_name, const char *file,
+void _exam_assert_equal_double(double expected, double result, const char *file,
                                int line);
-void _exam_assert_equal_float(float expected, float result,
-                              const char *test_name, const char *file,
+void _exam_assert_equal_float(float expected, float result, const char *file,
                               int line);
-void _exam_assert_equal_int(int expected, int result, const char *test_name,
-                            const char *file, int line);
+void _exam_assert_equal_int(int expected, int result, const char *file,
+                            int line);
 void _exam_assert_equal_str(const char *expected, const char *result,
-                            const char *test_name, const char *file, int line);
+                            const char *file, int line);
 void _exam_assert_equal_mem(void *expected, void *result, size_t len,
-                            const char *test_name, const char *file, int line);
+                            const char *file, int line);
 
 #define __ISTYPE(x, t) __builtin_types_compatible_p(typeof(x), t)
 
@@ -74,26 +72,21 @@ void _exam_assert_equal_mem(void *expected, void *result, size_t len,
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, char[]), _exam_assert_equal_str,                      \
     (void)0))))                                                                \
-  (expected, result, __internal_test_name, __FILE__, __LINE__))
+  (expected, result, __FILE__, __LINE__))
 // clang-format on
 #define ASSERT_EQUAL_MEM(expected, result, len)                                \
-  _exam_assert_equal_mem(expected, result, len, __internal_test_name,          \
-                         __FILE__, __LINE__)
+  _exam_assert_equal_mem(expected, result, len, __FILE__, __LINE__)
 
 void _exam_assert_not_equal_double(double expected, double result,
-                                   const char *test_name, const char *file,
-                                   int line);
+                                   const char *file, int line);
 void _exam_assert_not_equal_float(float expected, float result,
-                                  const char *test_name, const char *file,
-                                  int line);
-void _exam_assert_not_equal_int(int expected, int result, const char *test_name,
-                                const char *file, int line);
+                                  const char *file, int line);
+void _exam_assert_not_equal_int(int expected, int result, const char *file,
+                                int line);
 void _exam_assert_not_equal_str(const char *expected, const char *result,
-                                const char *test_name, const char *file,
-                                int line);
+                                const char *file, int line);
 void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
-                                const char *test_name, const char *file,
-                                int line);
+                                const char *file, int line);
 
 #define __ISTYPE(x, t) __builtin_types_compatible_p(typeof(x), t)
 
@@ -113,10 +106,9 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, char[]), _exam_assert_not_equal_str,                  \
     (void)0))))                                                                \
-  (expected, result, __internal_test_name, __FILE__, __LINE__))
+  (expected, result, __FILE__, __LINE__))
 // clang-format on
 #define ASSERT_NOT_EQUAL_MEM(expected, result, len)                            \
-  _exam_assert_not_equal_mem(expected, result, len, __internal_test_name,      \
-                             __FILE__, __LINE__)
+  _exam_assert_not_equal_mem(expected, result, len, __FILE__, __LINE__)
 
 #endif // EXAMINER_H
