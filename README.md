@@ -29,6 +29,19 @@ TEST(math, test_int) {
   ASSERT_NOT_EQUAL(1, 2);
 }
 
+/**
+ * You can define BEFORE_EACH and AFTER_EACH for each scope (even after a test
+ * definition). Before each and after each will run before and after each test
+ * in the "math" scope (for this example)
+ */
+BEFORE_EACH(math) {
+  printf("Before math POG\n");
+}
+
+AFTER_EACH(math) {
+  printf("After math POG\n");
+}
+
 TEST(str, test) {
   ASSERT_EQUAL("test", "test");
   ASSERT_NOT_EQUAL("test", "nest");
@@ -86,7 +99,7 @@ LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib ./test --filter math.test_int
 ## TODO:
 
 - [x] More test definitions `PENDING`
-- [ ] `BEFORE_EACH` and `AFTER_EACH`
+- [x] `BEFORE_EACH` and `AFTER_EACH`
 - [x] Assert more than just int
 - [x] `ASSERT_TRUE` and `ASSERT_FALSE`
 - [ ] `ASSERT_LIST` with `...` / `__VA_ARGS__`

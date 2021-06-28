@@ -18,6 +18,8 @@ typedef struct {
   size_t len;
   size_t cap;
   const char *name;
+  void (*before)();
+  void (*after)();
 } exam_scope_t;
 
 typedef struct {
@@ -41,6 +43,7 @@ void exam_init(int argc, char **argv);
 int exam_run();
 void _exam_register_test(const char *scope, const char *name, void (*fn)(),
                          bool pending);
+void _exam_register_each(const char *scope, void (*fn)(), bool before);
 
 #define __REGISTER_TEST(SCOPE, NAME, PENDING)                                  \
   void examtest_##SCOPE##_##NAME();                                            \
@@ -52,6 +55,21 @@ void _exam_register_test(const char *scope, const char *name, void (*fn)(),
 
 #define TEST(SCOPE, NAME) __REGISTER_TEST(SCOPE, NAME, false)
 #define PENDING(SCOPE, NAME) __REGISTER_TEST(SCOPE, NAME, true)
+
+#define BEFORE_EACH(SCOPE)                                                     \
+  void examtest_before_each_##SCOPE();                                         \
+  void examtest_before_each_##SCOPE##_register() __attribute__((constructor)); \
+  void examtest_before_each_##SCOPE##_register() {                             \
+    _exam_register_each(#SCOPE, &examtest_before_each_##SCOPE, true);          \
+  }                                                                            \
+  void examtest_before_each_##SCOPE()
+#define AFTER_EACH(SCOPE)                                                      \
+  void examtest_after_each_##SCOPE();                                          \
+  void examtest_after_each_##SCOPE##_register() __attribute__((constructor));  \
+  void examtest_after_each_##SCOPE##_register() {                              \
+    _exam_register_each(#SCOPE, &examtest_after_each_##SCOPE, false);          \
+  }                                                                            \
+  void examtest_after_each_##SCOPE()
 
 /////////////
 // ASSERTS //

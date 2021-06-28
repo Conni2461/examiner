@@ -171,8 +171,7 @@ int exam_run() {
 
   printf("%s[==========] Running %zu test(s)%s\n", GRAY, count, NONE);
   for (size_t i = 0; i < global_env.tbl.len; ++i) {
-    printf("%s[==========] Running %zu test(s) in scope %s%s\n", GRAY,
-           global_env.tbl.scope[i].len, global_env.tbl.scope[i].name, NONE);
+    bool printed_scope = false;
     size_t scope_passed = 0;
     for (size_t j = 0; j < global_env.tbl.scope[i].len; ++j) {
       exam_test_t *current_test = &global_env.tbl.scope[i].tests[j];
@@ -181,6 +180,11 @@ int exam_run() {
           !exam_filter_test(buf, global_env.filter)) {
         free(buf);
         continue;
+      }
+      if (!printed_scope) {
+        printf("%s[==========] Running %zu test(s) in scope %s%s\n", GRAY,
+               global_env.tbl.scope[i].len, global_env.tbl.scope[i].name, NONE);
+        printed_scope = true;
       }
       if (current_test->pending) {
         printf("%s[ PENDING  ] %s%s\n", BLUE, NONE, buf);
@@ -191,10 +195,16 @@ int exam_run() {
         printf("%s[ RUN      ] %s%s\n", GRAY, NONE, buf);
         double diff;
         for (size_t k = 0; k < global_env.repeat; k++) {
+          if (global_env.tbl.scope[i].before != NULL) {
+            global_env.tbl.scope[i].before();
+          }
           clock_t start = clock();
           current_test->fn();
           clock_t end = clock();
           diff = ((double)(end - start)) / CLOCKS_PER_SEC;
+          if (global_env.tbl.scope[i].after != NULL) {
+            global_env.tbl.scope[i].after();
+          }
         }
         ++passed;
         ++scope_passed;
@@ -208,9 +218,11 @@ int exam_run() {
       }
       free(buf);
     }
-    printf("%s[  PASSED  ] %zu test(s) passed in scope %s%s\n", GREEN,
-           scope_passed, global_env.tbl.scope[i].name, NONE);
-    printf("\n");
+    if (printed_scope) {
+      printf("%s[  PASSED  ] %zu test(s) passed in scope %s%s\n", GREEN,
+             scope_passed, global_env.tbl.scope[i].name, NONE);
+      printf("\n");
+    }
   }
 
   printf("%s[  PASSED  ] %zu test(s) across all scopes%s\n", GREEN, passed,
@@ -239,34 +251,63 @@ static void exam_insert_test_in_list(exam_scope_t *list, const char *scope,
       (exam_test_t){.fn = fn, .scope = scope, .name = name, .pending = pending};
 }
 
-void _exam_register_test(const char *scope, const char *name, void (*fn)(),
-                         bool pending) {
+static void exam_ensure_tbl() {
   if (global_env.tbl.scope == NULL) {
     global_env.tbl.cap = 8;
     global_env.tbl.scope = malloc(sizeof(exam_scope_t) * global_env.tbl.cap);
     memset(global_env.tbl.scope, 0, sizeof(exam_scope_t) * global_env.tbl.cap);
     global_env.tbl.len = 0;
   }
+}
 
-  size_t idx = 0;
-  for (; idx < global_env.tbl.len; ++idx) {
-    if (strcmp(scope, global_env.tbl.scope[idx].name) == 0) {
-      exam_insert_test_in_list(&global_env.tbl.scope[idx], scope, name, fn,
-                               pending);
-      return;
-    }
-  }
-  // At this point we have not found it in our simple table
+static exam_scope_t *exam_insert_new_scope(const char *scope) {
   if (global_env.tbl.len + 1 >= global_env.tbl.cap) {
     global_env.tbl.cap *= 2;
     global_env.tbl.scope = realloc(global_env.tbl.scope,
                                    sizeof(exam_scope_t) * global_env.tbl.cap);
   }
 
-  global_env.tbl.scope[global_env.tbl.len] =
-      (exam_scope_t){.tests = NULL, .len = 0, .cap = 0, .name = scope};
-  exam_insert_test_in_list(&global_env.tbl.scope[global_env.tbl.len++], scope,
-                           name, fn, pending);
+  global_env.tbl.scope[global_env.tbl.len] = (exam_scope_t){.tests = NULL,
+                                                            .len = 0,
+                                                            .cap = 0,
+                                                            .name = scope,
+                                                            .before = NULL,
+                                                            .after = NULL};
+  return &global_env.tbl.scope[global_env.tbl.len++];
+}
+
+void _exam_register_test(const char *scope, const char *name, void (*fn)(),
+                         bool pending) {
+  exam_ensure_tbl();
+  for (size_t i = 0; i < global_env.tbl.len; ++i) {
+    if (strcmp(scope, global_env.tbl.scope[i].name) == 0) {
+      exam_insert_test_in_list(&global_env.tbl.scope[i], scope, name, fn,
+                               pending);
+      return;
+    }
+  }
+  exam_insert_test_in_list(exam_insert_new_scope(scope), scope, name, fn,
+                           pending);
+}
+
+void _exam_register_each(const char *scope, void (*fn)(), bool before) {
+  exam_ensure_tbl();
+  for (size_t i = 0; i < global_env.tbl.len; ++i) {
+    if (strcmp(scope, global_env.tbl.scope[i].name) == 0) {
+      if (before) {
+        global_env.tbl.scope[i].before = fn;
+      } else {
+        global_env.tbl.scope[i].after = fn;
+      }
+      return;
+    }
+  }
+  exam_scope_t *newScope = exam_insert_new_scope(scope);
+  if (before) {
+    newScope->before = fn;
+  } else {
+    newScope->after = fn;
+  }
 }
 
 void _exam_assert_true(bool value, const char *file, int line) {

@@ -1,5 +1,7 @@
 #include "examiner.h"
 
+#include <stdio.h>
+
 TEST(math, test_int) {
   ASSERT_EQUAL(1, 1);
   ASSERT_NOT_EQUAL(1, 2);
@@ -13,6 +15,28 @@ TEST(math, test_double) {
 TEST(math, test_float) {
   ASSERT_EQUAL(1.0f, 1.0f);
   ASSERT_NOT_EQUAL(1.0f, 2.0f);
+}
+
+int __each = 0;
+
+BEFORE_EACH(each) {
+  __each += 2;
+}
+
+AFTER_EACH(each) {
+  __each -= 1;
+}
+
+TEST(each, a) {
+  ASSERT_EQUAL(2, __each);
+}
+
+TEST(each, b) {
+  ASSERT_EQUAL(3, __each);
+}
+
+TEST(each, c) {
+  ASSERT_EQUAL(4, __each);
 }
 
 TEST(boolean, should_work) {
