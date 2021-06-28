@@ -15,7 +15,7 @@ TEST(math, test_float) {
   ASSERT_NOT_EQUAL(1.0f, 2.0f);
 }
 
-TEST(bool, should_work) {
+TEST(boolean, should_work) {
   ASSERT_TRUE(true);
   ASSERT_FALSE(false);
 }
@@ -35,6 +35,6 @@ PENDING(pending, should_fail) {
 }
 
 int main(int argc, char **argv) {
-  exam_env_t env = exam_init(argc, argv);
-  return exam_run(&env);
+  exam_init(argc, argv);
+  return exam_run();
 }

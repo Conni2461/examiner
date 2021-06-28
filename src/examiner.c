@@ -8,8 +8,9 @@
 
 const static double EPSILON = 0.0001;
 
-static sigjmp_buf global_env;
+static sigjmp_buf global_sig;
 static exam_test_list_t global_tests = {0};
+static exam_env_t global_env = {0};
 
 static char *exam_concat_scope_name(const exam_test_t *test) {
   size_t buf_len = strlen(test->scope) + strlen(test->name) + 2;
@@ -36,11 +37,11 @@ static bool exam_filter_test(const char *name, const char *filter) {
   return true;
 }
 
-#define NONE env->color(0)
-#define RED env->color(31)
-#define GREEN env->color(32)
-#define BLUE env->color(34)
-#define GRAY env->color(90)
+#define NONE global_env.color(0)
+#define RED global_env.color(31)
+#define GREEN global_env.color(32)
+#define BLUE global_env.color(34)
+#define GRAY global_env.color(90)
 
 static const char *colored_matcher(int value) {
   switch (value) {
@@ -57,42 +58,42 @@ static const char *non_colored_matcher(int value) {
   return "";
 }
 
-exam_env_t exam_init(int argc, char **argv) {
-  const char *filter = NULL;
-  void *color = &colored_matcher;
-  int32_t repeat = 1;
-  bool list = false;
-  bool shuffel = false;
-  bool shortd = false;
-  bool die_on_fail = false;
+void exam_init(int argc, char **argv) {
+  global_env.filter = NULL;
+  global_env.color = &colored_matcher;
+  global_env.repeat = 1;
+  global_env.list = false;
+  global_env.shuffel = false;
+  global_env.shortd = false;
+  global_env.die_on_fail = false;
   if (argc > 1) {
     for (size_t i = 1; i < argc; ++i) {
       if (strncmp(argv[i], "--list-tests", 12) == 0) {
-        list = true;
+        global_env.list = true;
       } else if (strncmp(argv[i], "--short", 7) == 0) {
-        shortd = true;
+        global_env.shortd = true;
       } else if (strncmp(argv[i], "--filter", 8) == 0) {
         if ((i + 1) == argc) {
           fprintf(stderr, "--filter requires a second parameter\n");
           exit(1);
         }
         // TODO(conni2461): Allow to filter more than onces
-        filter = argv[++i];
+        global_env.filter = argv[++i];
       } else if (strncmp(argv[i], "--shuffel", 9) == 0) {
-        shuffel = true;
+        global_env.shuffel = true;
       } else if (strncmp(argv[i], "--repeat", 8) == 0) {
         if ((i + 1) == argc) {
           fprintf(stderr, "--repeat requires a second parameter\n");
           exit(1);
         }
-        repeat = atoi(argv[++i]);
-        if (repeat == 0) {
+        global_env.repeat = atoi(argv[++i]);
+        if (global_env.repeat == 0) {
           fprintf(stderr, "repeat is not a number or 0 is not a valid input. "
                           "Input has to be >= 1\n");
           exit(1);
         }
       } else if (strncmp(argv[i], "--die-on-fail", 13) == 0) {
-        die_on_fail = true;
+        global_env.die_on_fail = true;
       } else if (strncmp(argv[i], "--color", 7) == 0) {
         if ((i + 1) == argc) {
           fprintf(stderr, "--color requires a second parameter! on|off\n");
@@ -100,9 +101,9 @@ exam_env_t exam_init(int argc, char **argv) {
         }
         ++i;
         if (strncmp(argv[i], "on", 2) == 0) {
-          color = &colored_matcher;
+          global_env.color = &colored_matcher;
         } else if (strncmp(argv[i], "off", 3) == 0) {
-          color = &non_colored_matcher;
+          global_env.color = &non_colored_matcher;
         } else {
           fprintf(
               stderr,
@@ -137,24 +138,17 @@ exam_env_t exam_init(int argc, char **argv) {
       }
     }
   }
-  return (exam_env_t){.filter = filter,
-                      .color = color,
-                      .repeat = repeat,
-                      .list = list,
-                      .shuffel = shuffel,
-                      .shortd = shortd,
-                      .die_on_fail = die_on_fail};
 }
 
-int exam_run(const exam_env_t *env) {
+int exam_run() {
   int retValue = 0;
   size_t count = 0, passed = 0;
-  if (env->filter != NULL || env->list) {
+  if (global_env.filter != NULL || global_env.list) {
     for (size_t i = 0; i < global_tests.len; ++i) {
       char *buf = exam_concat_scope_name(&global_tests.tests[i]);
-      if (env->filter != NULL) {
-        if (exam_filter_test(buf, env->filter)) {
-          if (env->list) {
+      if (global_env.filter != NULL) {
+        if (exam_filter_test(buf, global_env.filter)) {
+          if (global_env.list) {
             printf("%s\n", buf);
           }
           ++count;
@@ -168,14 +162,15 @@ int exam_run(const exam_env_t *env) {
     count = global_tests.len;
   }
 
-  if (env->list) {
+  if (global_env.list) {
     exit(0);
   }
 
   printf("%s[==========] Running %zu test(s)%s\n", GRAY, count, NONE);
   for (size_t i = 0; i < global_tests.len; ++i) {
     char *buf = exam_concat_scope_name(&global_tests.tests[i]);
-    if (env->filter != NULL && !exam_filter_test(buf, env->filter)) {
+    if (global_env.filter != NULL &&
+        !exam_filter_test(buf, global_env.filter)) {
       free(buf);
       continue;
     }
@@ -184,12 +179,12 @@ int exam_run(const exam_env_t *env) {
       free(buf);
       continue;
     }
-    if (sigsetjmp(global_env, 1) == 0) {
+    if (sigsetjmp(global_sig, 1) == 0) {
       printf("%s[ RUN      ] %s%s\n", GRAY, NONE, buf);
       double diff;
-      for (size_t j = 0; j < env->repeat; j++) {
+      for (size_t j = 0; j < global_env.repeat; j++) {
         clock_t start = clock();
-        global_tests.tests[i].fn(env);
+        global_tests.tests[i].fn();
         clock_t end = clock();
         diff = ((double)(end - start)) / CLOCKS_PER_SEC;
       }
@@ -198,7 +193,7 @@ int exam_run(const exam_env_t *env) {
     } else {
       printf("%s[  FAILED  ] %s%s\n", RED, NONE, buf);
       retValue = 1;
-      if (env->die_on_fail) {
+      if (global_env.die_on_fail) {
         exit(1);
       }
     }
@@ -211,8 +206,8 @@ int exam_run(const exam_env_t *env) {
   return retValue;
 }
 
-void _exam_register_test(const char *scope, const char *name,
-                         void (*fn)(const exam_env_t *), bool pending) {
+void _exam_register_test(const char *scope, const char *name, void (*fn)(),
+                         bool pending) {
   if (global_tests.tests == NULL) {
     global_tests.tests = malloc(sizeof(exam_test_list_t) * 16);
     global_tests.len = 0;
@@ -228,66 +223,64 @@ void _exam_register_test(const char *scope, const char *name,
       (exam_test_t){.fn = fn, .scope = scope, .name = name, .pending = pending};
 }
 
-void _exam_assert_true(bool value, const char *file, int line,
-                       const exam_env_t *env) {
+void _exam_assert_true(bool value, const char *file, int line) {
   if (!value) {
     printf("  Error at line: %s:%d\n", file, line);
     printf("  %sexpected: true %sreceived: false %s\n", GREEN, RED, NONE);
-    siglongjmp(global_env, 1);
+    siglongjmp(global_sig, 1);
   }
 }
 
-void _exam_assert_false(bool value, const char *file, int line,
-                        const exam_env_t *env) {
+void _exam_assert_false(bool value, const char *file, int line) {
   if (value) {
     printf("  Error at line: %s:%d\n", file, line);
     printf("  %sexpected: false %sreceived: true %s\n", GREEN, RED, NONE);
-    siglongjmp(global_env, 1);
+    siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_equal_double(double expected, double result, const char *file,
-                               int line, const exam_env_t *env) {
+                               int line) {
   if (fabs(expected - result) >= EPSILON) {
     printf("  Error at line: %s:%d\n", file, line);
     printf("  %sExpected: %f %sResult: %f%s\n", GREEN, expected, RED, result,
            NONE);
-    siglongjmp(global_env, 1);
+    siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_equal_float(float expected, float result, const char *file,
-                              int line, const exam_env_t *env) {
+                              int line) {
   if (fabs(expected - result) >= EPSILON) {
     printf("  Error at line: %s:%d\n", file, line);
     printf("  %sExpected: %f %sResult: %f%s\n", GREEN, expected, RED, result,
            NONE);
-    siglongjmp(global_env, 1);
+    siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_equal_int(int expected, int result, const char *file,
-                            int line, const exam_env_t *env) {
+                            int line) {
   if (expected != result) {
     printf("  Error at line: %s:%d\n", file, line);
     printf("  %sExpected: %d %sResult: %d%s\n", GREEN, expected, RED, result,
            NONE);
-    siglongjmp(global_env, 1);
+    siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_equal_str(const char *expected, const char *result,
-                            const char *file, int line, const exam_env_t *env) {
+                            const char *file, int line) {
   if (strcmp(expected, result) != 0) {
     printf("  Error at line: %s:%d\n", file, line);
     printf("  %sExpected: %s %sResult: %s%s\n", GREEN, expected, RED, result,
            NONE);
-    siglongjmp(global_env, 1);
+    siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_equal_mem(void *expected, void *result, size_t len,
-                            const char *file, int line, const exam_env_t *env) {
+                            const char *file, int line) {
   const char *a = (const char *)expected;
   const char *b = (const char *)result;
 
@@ -312,56 +305,52 @@ void _exam_assert_equal_mem(void *expected, void *result, size_t len,
     printf("  %zd bytes of %p and %p are different\n", differences, (void *)a,
            (void *)b);
 
-    siglongjmp(global_env, 1);
+    siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_not_equal_double(double expected, double result,
-                                   const char *file, int line,
-                                   const exam_env_t *env) {
+                                   const char *file, int line) {
   if (fabs(expected - result) < EPSILON) {
     printf("  Error at line: %s:%d\n", file, line);
     printf("  %sExpected: %f %sResult: %f%s\n", GREEN, expected, RED, result,
            NONE);
-    siglongjmp(global_env, 1);
+    siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_not_equal_float(float expected, float result,
-                                  const char *file, int line,
-                                  const exam_env_t *env) {
+                                  const char *file, int line) {
   if (fabs(expected - result) < EPSILON) {
     printf("  Error at line: %s:%d\n", file, line);
     printf("  %sExpected: %f %sResult: %f%s\n", GREEN, expected, RED, result,
            NONE);
-    siglongjmp(global_env, 1);
+    siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_not_equal_int(int expected, int result, const char *file,
-                                int line, const exam_env_t *env) {
+                                int line) {
   if (expected == result) {
     printf("  Error at line: %s:%d\n", file, line);
     printf("  %sExpected: %d %sResult: %d%s\n", GREEN, expected, RED, result,
            NONE);
-    siglongjmp(global_env, 1);
+    siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_not_equal_str(const char *expected, const char *result,
-                                const char *file, int line,
-                                const exam_env_t *env) {
+                                const char *file, int line) {
   if (strcmp(expected, result) == 0) {
     printf("  Error at line: %s:%d\n", file, line);
     printf("  %sExpected: %s %sResult: %s%s\n", GREEN, expected, RED, result,
            NONE);
-    siglongjmp(global_env, 1);
+    siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
-                                const char *file, int line,
-                                const exam_env_t *env) {
+                                const char *file, int line) {
   const char *a = (const char *)expected;
   const char *b = (const char *)result;
 
@@ -386,6 +375,6 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
     printf("  %zd bytes of %p and %p are same\n", differences, (void *)a,
            (void *)b);
 
-    siglongjmp(global_env, 1);
+    siglongjmp(global_sig, 1);
   }
 }

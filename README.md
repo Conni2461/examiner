@@ -4,7 +4,7 @@ A small, opinionated c unit testing framework.
 
 ## Build
 
-```sh
+```bash
 make -j TYPE=-O2    # or a different optimization, like -Ofast. Default is: `-Og --ggdb3` (might change soon)
 sudo make install   # to install it
 sudo make uninstall # to remove it again
@@ -54,14 +54,14 @@ PENDING(pending, should_fail) {
  *  more.
  */
 int main(int argc, char **argv) {
-  exam_env_t env = exam_init(argc, argv);
-  return exam_run(&env);
+  exam_init(argc, argv);
+  return exam_run();
 }
 ```
 
 Build and like your source code against `examiner`
 
-```sh
+```bash
 cc test_file.c -o test -lexaminer
 ```
 
@@ -70,7 +70,7 @@ If you get
 ./test: error while loading shared libraries: libexaminer.so: cannot open shared object file: No such file or directory
 ```
 then your `LD_LIBRARY_PATH` is probably missing `/usr/local/bin`
-```sh
+```bash
 LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib ./test
 
 # To see help page run
