@@ -95,8 +95,8 @@ LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib ./test --filter math.test_int
 - [ ] Easy multifile support
 - [x] `--filter` needs substr matching so i can only run one namespace
 - [x] timer how loong the execution of a test took
-- [ ] separator between namespaces (either a `\n` or `string.rep(78, '-')`
-  - [ ] better grouping even if they are not sorted in the file.
+- [x] separator between namespaces (either a `\n` or `string.rep(78, '-')`
+  - [x] better grouping even if they are not sorted in the file.
         (scope grouping)
 - [x] Documentation
   - [x] Guide in github

@@ -17,9 +17,17 @@ typedef struct {
   exam_test_t *tests;
   size_t len;
   size_t cap;
-} exam_test_list_t;
+  const char *name;
+} exam_scope_t;
 
 typedef struct {
+  exam_scope_t *scope;
+  size_t len;
+  size_t cap;
+} exam_test_table_t;
+
+typedef struct {
+  exam_test_table_t tbl;
   const char *filter;
   const char *(*color)(int);
   int32_t repeat;

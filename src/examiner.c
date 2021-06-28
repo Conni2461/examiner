@@ -9,7 +9,6 @@
 const static double EPSILON = 0.0001;
 
 static sigjmp_buf global_sig;
-static exam_test_list_t global_tests = {0};
 static exam_env_t global_env = {0};
 
 static char *exam_concat_scope_name(const exam_test_t *test) {
@@ -144,22 +143,26 @@ int exam_run() {
   int retValue = 0;
   size_t count = 0, passed = 0;
   if (global_env.filter != NULL || global_env.list) {
-    for (size_t i = 0; i < global_tests.len; ++i) {
-      char *buf = exam_concat_scope_name(&global_tests.tests[i]);
-      if (global_env.filter != NULL) {
-        if (exam_filter_test(buf, global_env.filter)) {
-          if (global_env.list) {
-            printf("%s\n", buf);
+    for (size_t i = 0; i < global_env.tbl.len; ++i) {
+      for (size_t j = 0; j < global_env.tbl.scope[i].len; ++j) {
+        char *buf = exam_concat_scope_name(&global_env.tbl.scope[i].tests[j]);
+        if (global_env.filter != NULL) {
+          if (exam_filter_test(buf, global_env.filter)) {
+            if (global_env.list) {
+              printf("%s\n", buf);
+            }
+            ++count;
           }
-          ++count;
+        } else {
+          printf("%s\n", buf);
         }
-      } else {
-        printf("%s\n", buf);
+        free(buf);
       }
-      free(buf);
     }
   } else {
-    count = global_tests.len;
+    for (size_t i = 0; i < global_env.tbl.len; ++i) {
+      count += global_env.tbl.scope[i].len;
+    }
   }
 
   if (global_env.list) {
@@ -167,60 +170,103 @@ int exam_run() {
   }
 
   printf("%s[==========] Running %zu test(s)%s\n", GRAY, count, NONE);
-  for (size_t i = 0; i < global_tests.len; ++i) {
-    char *buf = exam_concat_scope_name(&global_tests.tests[i]);
-    if (global_env.filter != NULL &&
-        !exam_filter_test(buf, global_env.filter)) {
-      free(buf);
-      continue;
-    }
-    if (global_tests.tests[i].pending) {
-      printf("%s[ PENDING  ] %s%s\n", BLUE, NONE, buf);
-      free(buf);
-      continue;
-    }
-    if (sigsetjmp(global_sig, 1) == 0) {
-      printf("%s[ RUN      ] %s%s\n", GRAY, NONE, buf);
-      double diff;
-      for (size_t j = 0; j < global_env.repeat; j++) {
-        clock_t start = clock();
-        global_tests.tests[i].fn();
-        clock_t end = clock();
-        diff = ((double)(end - start)) / CLOCKS_PER_SEC;
+  for (size_t i = 0; i < global_env.tbl.len; ++i) {
+    printf("%s[==========] Running %zu test(s) in scope %s%s\n", GRAY,
+           global_env.tbl.scope[i].len, global_env.tbl.scope[i].name, NONE);
+    size_t scope_passed = 0;
+    for (size_t j = 0; j < global_env.tbl.scope[i].len; ++j) {
+      exam_test_t *current_test = &global_env.tbl.scope[i].tests[j];
+      char *buf = exam_concat_scope_name(current_test);
+      if (global_env.filter != NULL &&
+          !exam_filter_test(buf, global_env.filter)) {
+        free(buf);
+        continue;
       }
-      ++passed;
-      printf("%s[       OK ] %s%s [%.2f s]\n", GREEN, NONE, buf, diff);
-    } else {
-      printf("%s[  FAILED  ] %s%s\n", RED, NONE, buf);
-      retValue = 1;
-      if (global_env.die_on_fail) {
-        exit(1);
+      if (current_test->pending) {
+        printf("%s[ PENDING  ] %s%s\n", BLUE, NONE, buf);
+        free(buf);
+        continue;
       }
+      if (sigsetjmp(global_sig, 1) == 0) {
+        printf("%s[ RUN      ] %s%s\n", GRAY, NONE, buf);
+        double diff;
+        for (size_t k = 0; k < global_env.repeat; k++) {
+          clock_t start = clock();
+          current_test->fn();
+          clock_t end = clock();
+          diff = ((double)(end - start)) / CLOCKS_PER_SEC;
+        }
+        ++passed;
+        ++scope_passed;
+        printf("%s[       OK ] %s%s [%.2f s]\n", GREEN, NONE, buf, diff);
+      } else {
+        printf("%s[  FAILED  ] %s%s\n", RED, NONE, buf);
+        retValue = 1;
+        if (global_env.die_on_fail) {
+          exit(1);
+        }
+      }
+      free(buf);
     }
-    free(buf);
+    printf("%s[  PASSED  ] %zu test(s) passed in scope %s%s\n", GREEN,
+           scope_passed, global_env.tbl.scope[i].name, NONE);
+    printf("\n");
   }
 
-  printf("%s[  PASSED  ] %zu test(s)%s\n", GREEN, passed, NONE);
-  printf("%s[==========] Ran %zu test(s)%s\n", GRAY, count, NONE);
+  printf("%s[  PASSED  ] %zu test(s) across all scopes%s\n", GREEN, passed,
+         NONE);
+  printf("%s[==========] Ran %zu test(s) across all scopes%s\n", GRAY, count,
+         NONE);
 
   return retValue;
 }
 
-void _exam_register_test(const char *scope, const char *name, void (*fn)(),
-                         bool pending) {
-  if (global_tests.tests == NULL) {
-    global_tests.tests = malloc(sizeof(exam_test_list_t) * 16);
-    global_tests.len = 0;
-    global_tests.cap = 16;
+static void exam_insert_test_in_list(exam_scope_t *list, const char *scope,
+                                     const char *name, void (*fn)(),
+                                     bool pending) {
+  if (list->tests == NULL) {
+    list->cap = 16;
+    list->tests = malloc(sizeof(exam_scope_t) * list->cap);
+    list->len = 0;
   } else {
-    if (global_tests.len + 1 >= global_tests.cap) {
-      global_tests.cap *= 2;
-      global_tests.tests = realloc(global_tests.tests, global_tests.cap);
+    if (list->len + 1 >= list->cap) {
+      list->cap *= 2;
+      list->tests = realloc(list->tests, sizeof(exam_scope_t) * list->cap);
     }
   }
 
-  global_tests.tests[global_tests.len++] =
+  list->tests[list->len++] =
       (exam_test_t){.fn = fn, .scope = scope, .name = name, .pending = pending};
+}
+
+void _exam_register_test(const char *scope, const char *name, void (*fn)(),
+                         bool pending) {
+  if (global_env.tbl.scope == NULL) {
+    global_env.tbl.cap = 8;
+    global_env.tbl.scope = malloc(sizeof(exam_scope_t) * global_env.tbl.cap);
+    memset(global_env.tbl.scope, 0, sizeof(exam_scope_t) * global_env.tbl.cap);
+    global_env.tbl.len = 0;
+  }
+
+  size_t idx = 0;
+  for (; idx < global_env.tbl.len; ++idx) {
+    if (strcmp(scope, global_env.tbl.scope[idx].name) == 0) {
+      exam_insert_test_in_list(&global_env.tbl.scope[idx], scope, name, fn,
+                               pending);
+      return;
+    }
+  }
+  // At this point we have not found it in our simple table
+  if (global_env.tbl.len + 1 >= global_env.tbl.cap) {
+    global_env.tbl.cap *= 2;
+    global_env.tbl.scope = realloc(global_env.tbl.scope,
+                                   sizeof(exam_scope_t) * global_env.tbl.cap);
+  }
+
+  global_env.tbl.scope[global_env.tbl.len] =
+      (exam_scope_t){.tests = NULL, .len = 0, .cap = 0, .name = scope};
+  exam_insert_test_in_list(&global_env.tbl.scope[global_env.tbl.len++], scope,
+                           name, fn, pending);
 }
 
 void _exam_assert_true(bool value, const char *file, int line) {
