@@ -59,7 +59,7 @@ static const char *non_colored_matcher(int value) {
 
 exam_env_t exam_init(int argc, char **argv) {
   const char *filter = NULL;
-  exam_color_matcher color = &colored_matcher;
+  void *color = &colored_matcher;
   int32_t repeat = 1;
   bool list = false;
   bool shuffel = false;
@@ -211,8 +211,8 @@ int exam_run(const exam_env_t *env) {
   return retValue;
 }
 
-void _exam_register_test(const char *scope, const char *name, exam_test_fn fn,
-                         bool pending) {
+void _exam_register_test(const char *scope, const char *name,
+                         void (*fn)(const exam_env_t *), bool pending) {
   if (global_tests.tests == NULL) {
     global_tests.tests = malloc(sizeof(exam_test_list_t) * 16);
     global_tests.len = 0;
@@ -226,6 +226,24 @@ void _exam_register_test(const char *scope, const char *name, exam_test_fn fn,
 
   global_tests.tests[global_tests.len++] =
       (exam_test_t){.fn = fn, .scope = scope, .name = name, .pending = pending};
+}
+
+void _exam_assert_true(bool value, const char *file, int line,
+                       const exam_env_t *env) {
+  if (!value) {
+    printf("  Error at line: %s:%d\n", file, line);
+    printf("  %sexpected: true %sreceived: false %s\n", GREEN, RED, NONE);
+    siglongjmp(global_env, 1);
+  }
+}
+
+void _exam_assert_false(bool value, const char *file, int line,
+                        const exam_env_t *env) {
+  if (value) {
+    printf("  Error at line: %s:%d\n", file, line);
+    printf("  %sexpected: false %sreceived: true %s\n", GREEN, RED, NONE);
+    siglongjmp(global_env, 1);
+  }
 }
 
 void _exam_assert_equal_double(double expected, double result, const char *file,

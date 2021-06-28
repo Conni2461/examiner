@@ -15,6 +15,11 @@ TEST(math, test_float) {
   ASSERT_NOT_EQUAL(1.0f, 2.0f);
 }
 
+TEST(bool, should_work) {
+  ASSERT_TRUE(true);
+  ASSERT_FALSE(false);
+}
+
 TEST(str, test) {
   ASSERT_EQUAL("test", "test");
   ASSERT_NOT_EQUAL("test", "nest");

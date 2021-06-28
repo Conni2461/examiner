@@ -5,6 +5,10 @@ BUILD_DIR ?= ./build
 CFLAGS ?= -Wall -Werror -fpic -Wshadow -Wconversion
 TYPE ?= -Og -ggdb3
 
+ifeq ($(PREFIX),)
+    PREFIX := /usr/local
+endif
+
 all: $(BUILD_DIR)/$(TARGET) $(BUILD_DIR)/test
 
 $(BUILD_DIR)/$(TARGET): src/examiner.c src/examiner.h
@@ -14,7 +18,7 @@ $(BUILD_DIR)/$(TARGET): src/examiner.c src/examiner.h
 $(BUILD_DIR)/test: build/$(TARGET) test/examiner_test.c
 	$(CC) $(TYPE) $(CFLAGS) test/examiner_test.c -o build/test -I./src -L./build -lexaminer
 
-.PHONY: format test clean clangdhappy
+.PHONY: format test clean clangdhappy install uninstall
 format:
 	clang-format --style=file --dry-run -Werror src/examiner.c src/examiner.h
 
@@ -26,3 +30,13 @@ clean:
 
 clangdhappy:
 	compiledb make
+
+install:
+	-install -d $(DESTDIR)$(PREFIX)/lib/
+	-install -m 644 build/libexaminer.so $(DESTDIR)$(PREFIX)/lib/
+	-install -d $(DESTDIR)$(PREFIX)/include/
+	-install -m 644 src/examiner.h $(DESTDIR)$(PREFIX)/include/
+
+uninstall:
+	-rm $(DESTDIR)$(PREFIX)/lib/libexaminer.so
+	-rm $(DESTDIR)$(PREFIX)/include/examiner.h
