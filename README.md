@@ -117,7 +117,7 @@ LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib ./test --filter math.test_int
 - [x] enable/disable color. on / off
 - [x] `--list-tests`
 - [ ] `--short`
-- [ ] `--shuffle` test order
+- [x] `--shuffle` test order
 - [x] `--repeat` run tests multiple times
 - [x] `--die-on-failure` stop executing on fail
 - [x] make install/uninstall

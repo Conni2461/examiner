@@ -57,7 +57,36 @@ static const char *non_colored_matcher(int value) {
   return "";
 }
 
+static size_t *exam_create_shuffle(size_t n) {
+  if (!global_env.shuffel) {
+    return NULL;
+  }
+
+  size_t *array = malloc(sizeof(size_t) * global_env.tbl.len);
+  for (size_t i = 0; i < n; ++i) {
+    array[i] = i;
+  }
+  if (n > 1) {
+    for (size_t i = 0; i < n - 1; i++) {
+      size_t rnd = (size_t)rand();
+      size_t j = i + rnd / (RAND_MAX / (n - i) + 1);
+      size_t t = array[j];
+      array[j] = array[i];
+      array[i] = t;
+    }
+  }
+  return array;
+}
+
+static void exam_free_shuffel(size_t *array) {
+  if (array) {
+    free(array);
+  }
+}
+
 void exam_init(int argc, char **argv) {
+  srand((uint32_t)time(NULL));
+
   global_env.filter = NULL;
   global_env.color = &colored_matcher;
   global_env.repeat = 1;
@@ -169,12 +198,23 @@ int exam_run() {
     exit(0);
   }
 
+  size_t *scopes_indices = exam_create_shuffle(global_env.tbl.len);
   printf("%s[==========] Running %zu test(s)%s\n", GRAY, count, NONE);
   for (size_t i = 0; i < global_env.tbl.len; ++i) {
+    size_t ii = i;
+    if (global_env.shuffel) {
+      ii = scopes_indices[i];
+    }
     bool printed_scope = false;
     size_t scope_passed = 0;
-    for (size_t j = 0; j < global_env.tbl.scope[i].len; ++j) {
-      exam_test_t *current_test = &global_env.tbl.scope[i].tests[j];
+    size_t *tests_indices = exam_create_shuffle(global_env.tbl.scope[ii].len);
+    for (size_t j = 0; j < global_env.tbl.scope[ii].len; ++j) {
+      exam_test_t *current_test = NULL;
+      if (global_env.shuffel) {
+        current_test = &global_env.tbl.scope[ii].tests[tests_indices[j]];
+      } else {
+        current_test = &global_env.tbl.scope[ii].tests[j];
+      }
       char *buf = exam_concat_scope_name(current_test);
       if (global_env.filter != NULL &&
           !exam_filter_test(buf, global_env.filter)) {
@@ -183,7 +223,8 @@ int exam_run() {
       }
       if (!printed_scope) {
         printf("%s[==========] Running %zu test(s) in scope %s%s\n", GRAY,
-               global_env.tbl.scope[i].len, global_env.tbl.scope[i].name, NONE);
+               global_env.tbl.scope[ii].len, global_env.tbl.scope[ii].name,
+               NONE);
         printed_scope = true;
       }
       if (current_test->pending) {
@@ -195,15 +236,15 @@ int exam_run() {
         printf("%s[ RUN      ] %s%s\n", GRAY, NONE, buf);
         double diff;
         for (size_t k = 0; k < global_env.repeat; k++) {
-          if (global_env.tbl.scope[i].before != NULL) {
-            global_env.tbl.scope[i].before();
+          if (global_env.tbl.scope[ii].before != NULL) {
+            global_env.tbl.scope[ii].before();
           }
           clock_t start = clock();
           current_test->fn();
           clock_t end = clock();
           diff = ((double)(end - start)) / CLOCKS_PER_SEC;
-          if (global_env.tbl.scope[i].after != NULL) {
-            global_env.tbl.scope[i].after();
+          if (global_env.tbl.scope[ii].after != NULL) {
+            global_env.tbl.scope[ii].after();
           }
         }
         ++passed;
@@ -213,6 +254,9 @@ int exam_run() {
         printf("%s[  FAILED  ] %s%s\n", RED, NONE, buf);
         retValue = 1;
         if (global_env.die_on_fail) {
+          free(buf);
+          exam_free_shuffel(scopes_indices);
+          exam_free_shuffel(tests_indices);
           exit(1);
         }
       }
@@ -223,7 +267,9 @@ int exam_run() {
              scope_passed, global_env.tbl.scope[i].name, NONE);
       printf("\n");
     }
+    exam_free_shuffel(tests_indices);
   }
+  exam_free_shuffel(scopes_indices);
 
   printf("%s[  PASSED  ] %zu test(s) across all scopes%s\n", GREEN, passed,
          NONE);
