@@ -23,7 +23,7 @@ static char *exam_concat_scope_name(const exam_test_t *test) {
 }
 
 static bool exam_filter_test(const char *name, const char *filter) {
-  int i = 0;
+  int32_t i = 0;
   while (true) {
     if (filter[i] == '\0') {
       break;
@@ -31,7 +31,7 @@ static bool exam_filter_test(const char *name, const char *filter) {
     if (name[i] != filter[i]) {
       return false;
     }
-    i++;
+    ++i;
   }
   return true;
 }
@@ -42,7 +42,7 @@ static bool exam_filter_test(const char *name, const char *filter) {
 #define BLUE global_env.color(34)
 #define GRAY global_env.color(90)
 
-static const char *colored_matcher(int value) {
+static const char *colored_matcher(int32_t value) {
   switch (value) {
   case 0: return "\e[0m";
   case 31: return "\e[31m";
@@ -53,7 +53,7 @@ static const char *colored_matcher(int value) {
   return "\e[0m";
 }
 
-static const char *non_colored_matcher(int value) {
+static const char *non_colored_matcher(int32_t value) {
   return "";
 }
 
@@ -99,7 +99,7 @@ static void exam_print_failed(const char *name) {
   if (!global_env.shortd) {
     printf("%s[  FAILED  ] %s%s\n", RED, NONE, name);
   } else {
-    printf("%s%s", RED, NONE);
+    // for short: failing will be indicated in the assert
   }
 }
 
@@ -134,7 +134,7 @@ static size_t *exam_create_shuffle(size_t n) {
     array[i] = i;
   }
   if (n > 1) {
-    for (size_t i = 0; i < n - 1; i++) {
+    for (size_t i = 0; i < n - 1; ++i) {
       size_t rnd = (size_t)rand();
       size_t j = i + rnd / (RAND_MAX / (n - i) + 1);
       size_t t = array[j];
@@ -162,7 +162,7 @@ static void free_exam_env() {
   }
 }
 
-void exam_init(int argc, char **argv) {
+void exam_init(int32_t argc, char **argv) {
   srand((uint32_t)time(NULL));
 
   global_env.filter = NULL;
@@ -255,8 +255,8 @@ void exam_init(int argc, char **argv) {
   }
 }
 
-int exam_run() {
-  int retValue = 0;
+int32_t exam_run() {
+  int32_t retValue = 0;
   size_t count = 0, passed = 0;
   for (size_t i = 0; i < global_env.tbl.len; ++i) {
     size_t scope_name_len = strlen(global_env.tbl.scope[i].name);
@@ -324,7 +324,7 @@ int exam_run() {
       if (sigsetjmp(global_sig, 1) == 0) {
         exam_print_run(buf);
         double diff;
-        for (size_t k = 0; k < global_env.repeat; k++) {
+        for (size_t k = 0; k < global_env.repeat; ++k) {
           if (global_env.tbl.scope[ii].before != NULL) {
             global_env.tbl.scope[ii].before();
           }
@@ -444,81 +444,101 @@ void _exam_register_each(const char *scope, void (*fn)(), bool before) {
   }
 }
 
-void _exam_assert_true(bool value, const char *file, int line) {
+void _exam_assert_true(bool value, const char *file, int32_t line) {
   if (!value) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
       printf("  %sexpected: true %sreceived: false %s\n", GREEN, RED, NONE);
+    } else {
+      printf(" [ true != false ] ");
+      printf("%s%s [ %strue%s != %sfalse%s ] ", RED, NONE, GREEN, NONE, RED,
+             NONE);
     }
     siglongjmp(global_sig, 1);
   }
 }
 
-void _exam_assert_false(bool value, const char *file, int line) {
+void _exam_assert_false(bool value, const char *file, int32_t line) {
   if (value) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
       printf("  %sexpected: false %sreceived: true %s\n", GREEN, RED, NONE);
+    } else {
+      printf(" [ false != true ] ");
+      printf("%s%s [ %sfalse%s != %strue%s ] ", RED, NONE, GREEN, NONE, RED,
+             NONE);
     }
     siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_equal_double(double expected, double result, const char *file,
-                               int line) {
+                               int32_t line) {
   if (fabs(expected - result) >= EPSILON) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
       printf("  %sExpected: %f %sResult: %f%s\n", GREEN, expected, RED, result,
              NONE);
+    } else {
+      printf("%s%s [ %s%f%s != %s%f%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
     }
     siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_equal_float(float expected, float result, const char *file,
-                              int line) {
+                              int32_t line) {
   if (fabs(expected - result) >= EPSILON) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
       printf("  %sExpected: %f %sResult: %f%s\n", GREEN, expected, RED, result,
              NONE);
+    } else {
+      printf("%s%s [ %s%f%s != %s%f%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
     }
     siglongjmp(global_sig, 1);
   }
 }
 
-void _exam_assert_equal_int(int expected, int result, const char *file,
-                            int line) {
+void _exam_assert_equal_int(int32_t expected, int32_t result, const char *file,
+                            int32_t line) {
   if (expected != result) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
       printf("  %sExpected: %d %sResult: %d%s\n", GREEN, expected, RED, result,
              NONE);
+    } else {
+      printf("%s%s [ %s%d%s != %s%d%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
     }
     siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_equal_str(const char *expected, const char *result,
-                            const char *file, int line) {
+                            const char *file, int32_t line) {
   if (strcmp(expected, result) != 0) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
       printf("  %sExpected: %s %sResult: %s%s\n", GREEN, expected, RED, result,
              NONE);
+    } else {
+      printf("%s%s [ %s%s%s != %s%s%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
     }
     siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_equal_mem(void *expected, void *result, size_t len,
-                            const char *file, int line) {
+                            const char *file, int32_t line) {
   const char *a = (const char *)expected;
   const char *b = (const char *)result;
 
   size_t differences = 0;
-  for (size_t i = 0; i < len; i++) {
+  for (size_t i = 0; i < len; ++i) {
     const char l = a[i];
     const char r = b[i];
     if (l != r) {
@@ -532,7 +552,7 @@ void _exam_assert_equal_mem(void *expected, void *result, size_t len,
           printf("  difference at offset %zd 0x%02x != 0x%02x\n", i, l, r);
         }
       }
-      differences++;
+      ++differences;
     }
   }
   if (differences > 0) {
@@ -542,8 +562,10 @@ void _exam_assert_equal_mem(void *expected, void *result, size_t len,
       }
     }
     if (!global_env.shortd) {
-      printf("  %zd bytes of %p and %p are different\n", differences, (void *)a,
+      printf("  %zu bytes of %p and %p are different\n", differences, (void *)a,
              (void *)b);
+    } else {
+      printf("%s%s [%zu bytes differ] ", RED, NONE, differences);
     }
 
     siglongjmp(global_sig, 1);
@@ -551,60 +573,72 @@ void _exam_assert_equal_mem(void *expected, void *result, size_t len,
 }
 
 void _exam_assert_not_equal_double(double expected, double result,
-                                   const char *file, int line) {
+                                   const char *file, int32_t line) {
   if (fabs(expected - result) < EPSILON) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
       printf("  %sExpected: %f %sResult: %f%s\n", GREEN, expected, RED, result,
              NONE);
+    } else {
+      printf("%s%s [ %s%f%s != %s%f%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
     }
     siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_not_equal_float(float expected, float result,
-                                  const char *file, int line) {
+                                  const char *file, int32_t line) {
   if (fabs(expected - result) < EPSILON) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
       printf("  %sExpected: %f %sResult: %f%s\n", GREEN, expected, RED, result,
              NONE);
+    } else {
+      printf("%s%s [ %s%f%s != %s%f%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
     }
     siglongjmp(global_sig, 1);
   }
 }
 
-void _exam_assert_not_equal_int(int expected, int result, const char *file,
-                                int line) {
+void _exam_assert_not_equal_int(int32_t expected, int32_t result,
+                                const char *file, int32_t line) {
   if (expected == result) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
       printf("  %sExpected: %d %sResult: %d%s\n", GREEN, expected, RED, result,
              NONE);
+    } else {
+      printf("%s%s [ %s%d%s != %s%d%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
     }
     siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_not_equal_str(const char *expected, const char *result,
-                                const char *file, int line) {
+                                const char *file, int32_t line) {
   if (strcmp(expected, result) == 0) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
       printf("  %sExpected: %s %sResult: %s%s\n", GREEN, expected, RED, result,
              NONE);
+    } else {
+      printf("%s%s [ %s%s%s != %s%s%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
     }
     siglongjmp(global_sig, 1);
   }
 }
 
 void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
-                                const char *file, int line) {
+                                const char *file, int32_t line) {
   const char *a = (const char *)expected;
   const char *b = (const char *)result;
 
   size_t differences = 0;
-  for (size_t i = 0; i < len; i++) {
+  for (size_t i = 0; i < len; ++i) {
     const char l = a[i];
     const char r = b[i];
     if (l == r) {
@@ -618,7 +652,7 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
           printf("  same at offset %zd 0x%02x != 0x%02x\n", i, l, r);
         }
       }
-      differences++;
+      ++differences;
     }
   }
   if (differences > 0) {
@@ -628,8 +662,10 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
       }
     }
     if (!global_env.shortd) {
-      printf("  %zd bytes of %p and %p are same\n", differences, (void *)a,
+      printf("  %zu bytes of %p and %p are same\n", differences, (void *)a,
              (void *)b);
+    } else {
+      printf("%s%s [%zu bytes differ] ", RED, NONE, differences);
     }
 
     siglongjmp(global_sig, 1);
