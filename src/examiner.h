@@ -32,10 +32,11 @@ typedef struct {
   exam_test_table_t tbl;
   const char *filter;
   const char *(*color)(int);
+  int32_t longest_name_len;
   int32_t repeat;
   bool list;
-  bool shuffel; // TODO(conni2461):
-  bool shortd;  // TODO(conni2461):
+  bool shuffel;
+  bool shortd;
   bool die_on_fail;
 } exam_env_t;
 
