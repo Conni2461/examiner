@@ -125,7 +125,7 @@ static void exam_print_final(size_t count) {
 }
 
 static size_t *exam_create_shuffle(size_t n) {
-  if (!global_env.shuffel) {
+  if (!global_env.shuffle) {
     return NULL;
   }
 
@@ -145,9 +145,20 @@ static size_t *exam_create_shuffle(size_t n) {
   return array;
 }
 
-static void exam_free_shuffel(size_t *array) {
+static void exam_free_shuffle(size_t *array) {
   if (array) {
     free(array);
+  }
+}
+
+static void free_exam_env() {
+  for (size_t i = 0; i < global_env.tbl.len; ++i) {
+    if (global_env.tbl.scope[i].tests) {
+      free(global_env.tbl.scope[i].tests);
+    }
+  }
+  if (global_env.tbl.scope) {
+    free(global_env.tbl.scope);
   }
 }
 
@@ -159,7 +170,7 @@ void exam_init(int argc, char **argv) {
   global_env.longest_name_len = 0;
   global_env.repeat = 1;
   global_env.list = false;
-  global_env.shuffel = false;
+  global_env.shuffle = false;
   global_env.shortd = false;
   global_env.die_on_fail = false;
   if (argc > 1) {
@@ -171,21 +182,24 @@ void exam_init(int argc, char **argv) {
       } else if (strncmp(argv[i], "--filter", 8) == 0) {
         if ((i + 1) == argc) {
           fprintf(stderr, "--filter requires a second parameter\n");
+          free_exam_env();
           exit(1);
         }
         // TODO(conni2461): Allow to filter more than onces
         global_env.filter = argv[++i];
-      } else if (strncmp(argv[i], "--shuffel", 9) == 0) {
-        global_env.shuffel = true;
+      } else if (strncmp(argv[i], "--shuffle", 9) == 0) {
+        global_env.shuffle = true;
       } else if (strncmp(argv[i], "--repeat", 8) == 0) {
         if ((i + 1) == argc) {
           fprintf(stderr, "--repeat requires a second parameter\n");
+          free_exam_env();
           exit(1);
         }
         global_env.repeat = atoi(argv[++i]);
         if (global_env.repeat == 0) {
           fprintf(stderr, "repeat is not a number or 0 is not a valid input. "
                           "Input has to be >= 1\n");
+          free_exam_env();
           exit(1);
         }
       } else if (strncmp(argv[i], "--die-on-fail", 13) == 0) {
@@ -193,6 +207,7 @@ void exam_init(int argc, char **argv) {
       } else if (strncmp(argv[i], "--color", 7) == 0) {
         if ((i + 1) == argc) {
           fprintf(stderr, "--color requires a second parameter! on|off\n");
+          free_exam_env();
           exit(1);
         }
         ++i;
@@ -204,6 +219,7 @@ void exam_init(int argc, char **argv) {
           fprintf(
               stderr,
               "second parameter passed to color is neither `on` or `off`\n");
+          free_exam_env();
           exit(1);
         }
       } else if (strncmp(argv[i], "--help", 6) == 0 ||
@@ -213,7 +229,7 @@ void exam_init(int argc, char **argv) {
                "  --short           short output\n"
                "  --filter [str]    filter for one or many tests (substr "
                "matching)\n"
-               "  --shuffel         shuffel test execution order\n"
+               "  --shuffle         shuffle test execution order\n"
                "  --repeat [n]      repeat all tests n times\n"
                "  --die-on-fail     stop execution on failure\n"
                "\n"
@@ -222,14 +238,17 @@ void exam_init(int argc, char **argv) {
                "  -h | --help       print help page\n"
                "  -v | --version    print software version\n",
                argv[0]);
+        free_exam_env();
         exit(0);
       } else if (strncmp(argv[i], "--version", 8) == 0 ||
                  strncmp(argv[i], "-v", 2) == 0) {
         printf("Version 0.1 License MIT (conni2461)\n");
+        free_exam_env();
         exit(0);
       } else {
         fprintf(stderr, "Option %s not found! See -h for supported options",
                 argv[i]);
+        free_exam_env();
         exit(1);
       }
     }
@@ -265,6 +284,7 @@ int exam_run() {
   }
 
   if (global_env.list) {
+    free_exam_env();
     exit(0);
   }
 
@@ -272,7 +292,7 @@ int exam_run() {
   exam_print_running_all(count);
   for (size_t i = 0; i < global_env.tbl.len; ++i) {
     size_t ii = i;
-    if (global_env.shuffel) {
+    if (global_env.shuffle) {
       ii = scopes_indices[i];
     }
     bool printed_scope = false;
@@ -280,7 +300,7 @@ int exam_run() {
     size_t *tests_indices = exam_create_shuffle(global_env.tbl.scope[ii].len);
     for (size_t j = 0; j < global_env.tbl.scope[ii].len; ++j) {
       exam_test_t *current_test = NULL;
-      if (global_env.shuffel) {
+      if (global_env.shuffle) {
         current_test = &global_env.tbl.scope[ii].tests[tests_indices[j]];
       } else {
         current_test = &global_env.tbl.scope[ii].tests[j];
@@ -324,8 +344,9 @@ int exam_run() {
         retValue = 1;
         if (global_env.die_on_fail) {
           free(buf);
-          exam_free_shuffel(scopes_indices);
-          exam_free_shuffel(tests_indices);
+          exam_free_shuffle(scopes_indices);
+          exam_free_shuffle(tests_indices);
+          free_exam_env();
           exit(1);
         }
       }
@@ -335,13 +356,14 @@ int exam_run() {
       exam_print_passed_scope(scope_passed, global_env.tbl.scope[i].name);
       printf("\n");
     }
-    exam_free_shuffel(tests_indices);
+    exam_free_shuffle(tests_indices);
   }
-  exam_free_shuffel(scopes_indices);
+  exam_free_shuffle(scopes_indices);
 
   exam_print_passed_result(passed);
   exam_print_final(count);
 
+  free_exam_env();
   return retValue;
 }
 

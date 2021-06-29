@@ -3,7 +3,7 @@ TARGET ?= libexaminer.so
 BUILD_DIR ?= ./build
 
 CFLAGS ?= -Wall -Werror -fpic -Wshadow -Wconversion
-TYPE ?= -Og -ggdb3
+TYPE ?= -O2
 
 ifeq ($(PREFIX),)
     PREFIX := /usr/local
@@ -15,8 +15,16 @@ $(BUILD_DIR)/$(TARGET): src/examiner.c src/examiner.h
 	mkdir -p $(BUILD_DIR)
 	$(CC) $(TYPE) $(CFLAGS) -shared src/examiner.c -o $(BUILD_DIR)/$(TARGET)
 
-$(BUILD_DIR)/test: build/$(TARGET) test/examiner_test.c
-	$(CC) $(TYPE) $(CFLAGS) test/examiner_test.c -o build/test -I./src -L./build -lexaminer
+$(BUILD_DIR)/test: build/$(TARGET) test/main.c test/math_test.c test/each_test.c test/boolean_test.c test/str_test.c test/mem_test.c test/pending_test.c
+	$(CC) $(TYPE) $(CFLAGS) \
+		test/main.c \
+		test/math_test.c \
+		test/each_test.c \
+		test/boolean_test.c \
+		test/str_test.c \
+		test/mem_test.c \
+		test/pending_test.c \
+		-o build/test -I./src -L./build -lexaminer
 
 .PHONY: format test clean clangdhappy install uninstall
 format:

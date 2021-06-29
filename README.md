@@ -2,10 +2,33 @@
 
 A small, opinionated c unit testing framework.
 
+## Features
+
+- Autoregister tests
+- `ASSERT_EQUAL` and `ASSERT_NOT_EQUAL` macros that dispatches a compare to the
+appropriated type
+- `BEFORE_EACH` and `AFTER_EACH` to register functions that run before and/or
+after a scope
+- `PENDING` to tell examiner that a test should not run
+- colored output support
+- time how long it took to run a test
+- multiple files just work. Define one `main.c` file and n test files and build
+one executable. It should execute all tests without additional setup or header
+files. See makefile and `test` directory for an example
+- parsing argc argv for parameter options
+  - filter for test with `--filter pattern`, possible to only filter for a scope
+  thanks to prefix matching
+  - list all tests with `--list-tests`
+  - short output with `--short`
+  - shuffle test order with `--shuffle`
+  - repeat test with `--repeat n`
+  - die on fail with `--die-on-fail`
+  - disable colors with `--color off`
+
 ## Build
 
 ```bash
-make -j TYPE=-O2    # or a different optimization, like -Ofast. Default is: `-Og --ggdb3` (might change soon)
+make                # set optimazation with TYPE=, example: TYPE=-Og. Default is: `-O2`
 sudo make install   # to install it
 sudo make uninstall # to remove it again
 ```
@@ -95,29 +118,3 @@ LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib ./test --help
 LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib ./test --filter math
 LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib ./test --filter math.test_int
 ```
-
-## TODO:
-
-- [x] More test definitions `PENDING`
-- [x] `BEFORE_EACH` and `AFTER_EACH`
-- [x] Assert more than just int
-- [x] `ASSERT_TRUE` and `ASSERT_FALSE`
-- [ ] `ASSERT_LIST` with `...` / `__VA_ARGS__`
-- [x] When filtering it will still say the full filter count at the beginning
-- [x] Auto register TEST, no idea how. Good Luck to myself
-- [ ] Easy multifile support
-- [x] `--filter` needs substr matching so i can only run one namespace
-- [x] timer how loong the execution of a test took
-- [x] separator between namespaces (either a `\n` or `string.rep(78, '-')`
-  - [x] better grouping even if they are not sorted in the file.
-        (scope grouping)
-- [x] Documentation
-  - [x] Guide in github
-  - [x] `--help`
-- [x] enable/disable color. on / off
-- [x] `--list-tests`
-- [x] `--short`
-- [x] `--shuffle` test order
-- [x] `--repeat` run tests multiple times
-- [x] `--die-on-failure` stop executing on fail
-- [x] make install/uninstall

@@ -35,7 +35,7 @@ typedef struct {
   int32_t longest_name_len;
   int32_t repeat;
   bool list;
-  bool shuffel;
+  bool shuffle;
   bool shortd;
   bool die_on_fail;
 } exam_env_t;
