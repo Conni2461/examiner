@@ -25,6 +25,8 @@ files. See makefile and `test` directory for an example
   - die on fail with `--die-on-fail`
   - disable colors with `--color off`
 
+![preview](https://i.imgur.com/9vcLkOp.png)
+
 ## Build
 
 ```bash
@@ -46,7 +48,11 @@ sudo make uninstall # to remove it again
 TEST(math, test_int) {
   /** ASSERT_EQUAL and ASSERT_NOT_EQUAL are two macros that will dispatch based
    *  on the type to internal comparator functions. It dispatches
-   *  `int`, `float`, `double`, `char *`
+   *  `int32_t`, `uint32_t`,
+   *  `long int`, `unsigned long int`,
+   *  `long long`, `unsigned long long`,
+   *  `float`, `double`,
+   *  `char`, `char *`
    */
   ASSERT_EQUAL(1, 1);
   ASSERT_NOT_EQUAL(1, 2);

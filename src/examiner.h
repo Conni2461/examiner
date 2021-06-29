@@ -87,6 +87,20 @@ void _exam_assert_equal_float(float expected, float result, const char *file,
                               int32_t line);
 void _exam_assert_equal_int(int32_t expected, int32_t result, const char *file,
                             int32_t line);
+void _exam_assert_equal_uint(uint32_t expected, uint32_t result,
+                             const char *file, int32_t line);
+void _exam_assert_equal_long(long int expected, long int result,
+                             const char *file, int32_t line);
+void _exam_assert_equal_ulong(unsigned long int expected,
+                              unsigned long int result, const char *file,
+                              int32_t line);
+void _exam_assert_equal_long_long(long long expected, long long result,
+                                  const char *file, int32_t line);
+void _exam_assert_equal_ulong_long(unsigned long long expected,
+                                   unsigned long long result, const char *file,
+                                   int32_t line);
+void _exam_assert_equal_char(char expected, char result, const char *file,
+                             int32_t line);
 void _exam_assert_equal_str(const char *expected, const char *result,
                             const char *file, int32_t line);
 void _exam_assert_equal_mem(void *expected, void *result, size_t len,
@@ -98,6 +112,20 @@ void _exam_assert_not_equal_float(float expected, float result,
                                   const char *file, int32_t line);
 void _exam_assert_not_equal_int(int32_t expected, int32_t result,
                                 const char *file, int32_t line);
+void _exam_assert_not_equal_uint(uint32_t expected, uint32_t result,
+                                 const char *file, int32_t line);
+void _exam_assert_not_equal_long(long int expected, long int result,
+                                 const char *file, int32_t line);
+void _exam_assert_not_equal_ulong(unsigned long int expected,
+                                  unsigned long int result, const char *file,
+                                  int32_t line);
+void _exam_assert_not_equal_long_long(long long expected, long long result,
+                                      const char *file, int32_t line);
+void _exam_assert_not_equal_ulong_long(unsigned long long expected,
+                                       unsigned long long result,
+                                       const char *file, int32_t line);
+void _exam_assert_not_equal_char(char expected, char result, const char *file,
+                                 int32_t line);
 void _exam_assert_not_equal_str(const char *expected, const char *result,
                                 const char *file, int32_t line);
 void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
@@ -117,10 +145,22 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, float), _exam_assert_equal_float,                     \
     __builtin_choose_expr(                                                     \
-      __ISTYPE(expected, int32_t), _exam_assert_equal_int,                         \
+      __ISTYPE(expected, int32_t), _exam_assert_equal_int,                     \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, uint32_t), _exam_assert_equal_uint,                   \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, long int), _exam_assert_equal_long,                   \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, unsigned long int), _exam_assert_equal_ulong,         \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, long long), _exam_assert_equal_long_long,             \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, unsigned long long), _exam_assert_equal_ulong_long,   \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, char), _exam_assert_equal_char,                       \
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, char[]), _exam_assert_equal_str,                      \
-    (void)0))))                                                                \
+    (void)0))))))))))                                                          \
   (expected, result, __FILE__, __LINE__))
 
 #define ASSERT_NOT_EQUAL(expected, result)                                     \
@@ -134,10 +174,23 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, float), _exam_assert_not_equal_float,                 \
     __builtin_choose_expr(                                                     \
-      __ISTYPE(expected, int32_t), _exam_assert_not_equal_int,                     \
+      __ISTYPE(expected, int32_t), _exam_assert_not_equal_int,                 \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, uint32_t), _exam_assert_not_equal_uint,               \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, long int), _exam_assert_not_equal_long,               \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, unsigned long int), _exam_assert_not_equal_ulong,     \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, long long), _exam_assert_not_equal_long_long,         \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, unsigned long long),                                  \
+               _exam_assert_not_equal_ulong_long,                              \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, char), _exam_assert_not_equal_char,                   \
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, char[]), _exam_assert_not_equal_str,                  \
-    (void)0))))                                                                \
+    (void)0))))))))))                                                          \
   (expected, result, __FILE__, __LINE__))
 // clang-format on
 

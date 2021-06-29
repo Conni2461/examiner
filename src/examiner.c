@@ -103,10 +103,11 @@ static void exam_print_failed(const char *name) {
   }
 }
 
-static void exam_print_passed_scope(size_t passed, const char *name) {
+static void exam_print_passed_scope(size_t passed, const char *name,
+                                    double diff) {
   if (!global_env.shortd) {
-    printf("%s[  PASSED  ] %zu test(s) passed in scope %s%s\n", GREEN, passed,
-           name, NONE);
+    printf("%s[  PASSED  ] %zu test(s) passed in scope %s%s [%.2f s]\n", GREEN,
+           passed, name, NONE, diff);
   }
 }
 
@@ -298,6 +299,7 @@ int32_t exam_run() {
     bool printed_scope = false;
     size_t scope_passed = 0;
     size_t *tests_indices = exam_create_shuffle(global_env.tbl.scope[ii].len);
+    clock_t start_scope = clock();
     for (size_t j = 0; j < global_env.tbl.scope[ii].len; ++j) {
       exam_test_t *current_test = NULL;
       if (global_env.shuffle) {
@@ -353,7 +355,9 @@ int32_t exam_run() {
       free(buf);
     }
     if (printed_scope) {
-      exam_print_passed_scope(scope_passed, global_env.tbl.scope[i].name);
+      clock_t end_scope = clock();
+      double diff = ((double)(end_scope - start_scope)) / CLOCKS_PER_SEC;
+      exam_print_passed_scope(scope_passed, global_env.tbl.scope[i].name, diff);
       printf("\n");
     }
     exam_free_shuffle(tests_indices);
@@ -517,6 +521,98 @@ void _exam_assert_equal_int(int32_t expected, int32_t result, const char *file,
   }
 }
 
+void _exam_assert_equal_uint(uint32_t expected, uint32_t result,
+                             const char *file, int32_t line) {
+  if (expected != result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf("  %sExpected: %u %sResult: %u%s\n", GREEN, expected, RED, result,
+             NONE);
+    } else {
+      printf("%s%s [ %s%u%s != %s%u%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
+void _exam_assert_equal_long(long int expected, long int result,
+                             const char *file, int32_t line) {
+  if (expected != result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf("  %sExpected: %ld %sResult: %ld%s\n", GREEN, expected, RED,
+             result, NONE);
+    } else {
+      printf("%s%s [ %s%ld%s != %s%ld%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
+void _exam_assert_equal_ulong(unsigned long int expected,
+                              unsigned long int result, const char *file,
+                              int32_t line) {
+  if (expected != result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf("  %sExpected: %lu %sResult: %lu%s\n", GREEN, expected, RED,
+             result, NONE);
+    } else {
+      printf("%s%s [ %s%lu%s != %s%lu%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
+void _exam_assert_equal_long_long(long long expected, long long result,
+                                  const char *file, int32_t line) {
+  if (expected != result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf("  %sExpected: %lld %sResult: %lld%s\n", GREEN, expected, RED,
+             result, NONE);
+    } else {
+      printf("%s%s [ %s%lld%s != %s%lld%s ] ", RED, NONE, GREEN, expected,
+             NONE, RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
+void _exam_assert_equal_ulong_long(unsigned long long expected,
+                                   unsigned long long result, const char *file,
+                                   int32_t line) {
+  if (expected != result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf("  %sExpected: %llu %sResult: %llu%s\n", GREEN, expected, RED,
+             result, NONE);
+    } else {
+      printf("%s%s [ %s%llu%s != %s%llu%s ] ", RED, NONE, GREEN, expected,
+             NONE, RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
+void _exam_assert_equal_char(char expected, char result, const char *file,
+                             int32_t line) {
+  if (expected != result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf("  %sExpected: %c %sResult: %c%s\n", GREEN, expected, RED, result,
+             NONE);
+    } else {
+      printf("%s%s [ %s%c%s != %s%c%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
 void _exam_assert_equal_str(const char *expected, const char *result,
                             const char *file, int32_t line) {
   if (strcmp(expected, result) != 0) {
@@ -577,10 +673,10 @@ void _exam_assert_not_equal_double(double expected, double result,
   if (fabs(expected - result) < EPSILON) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
-      printf("  %sExpected: %f %sResult: %f%s\n", GREEN, expected, RED, result,
-             NONE);
+      printf("  %sExpected \"%f\" and result \"%f\" should not be the same%s\n",
+             RED, expected, result, NONE);
     } else {
-      printf("%s%s [ %s%f%s != %s%f%s ] ", RED, NONE, GREEN, expected, NONE,
+      printf("%s%s [ %s%f%s == %s%f%s ] ", RED, NONE, GREEN, expected, NONE,
              RED, result, NONE);
     }
     siglongjmp(global_sig, 1);
@@ -592,10 +688,10 @@ void _exam_assert_not_equal_float(float expected, float result,
   if (fabs(expected - result) < EPSILON) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
-      printf("  %sExpected: %f %sResult: %f%s\n", GREEN, expected, RED, result,
-             NONE);
+      printf("  %sExpected \"%f\" and result \"%f\" should not be the same%s\n",
+             RED, expected, result, NONE);
     } else {
-      printf("%s%s [ %s%f%s != %s%f%s ] ", RED, NONE, GREEN, expected, NONE,
+      printf("%s%s [ %s%f%s == %s%f%s ] ", RED, NONE, GREEN, expected, NONE,
              RED, result, NONE);
     }
     siglongjmp(global_sig, 1);
@@ -607,10 +703,107 @@ void _exam_assert_not_equal_int(int32_t expected, int32_t result,
   if (expected == result) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
-      printf("  %sExpected: %d %sResult: %d%s\n", GREEN, expected, RED, result,
-             NONE);
+      printf("  %sExpected \"%d\" and result \"%d\" should not be the same%s\n",
+             RED, expected, result, NONE);
     } else {
-      printf("%s%s [ %s%d%s != %s%d%s ] ", RED, NONE, GREEN, expected, NONE,
+      printf("%s%s [ %s%d%s == %s%d%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
+void _exam_assert_not_equal_uint(uint32_t expected, uint32_t result,
+                                 const char *file, int32_t line) {
+  if (expected == result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf("  %sExpected \"%u\" and result \"%u\" should not be the same%s\n",
+             RED, expected, result, NONE);
+    } else {
+      printf("%s%s [ %s%u%s == %s%u%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
+void _exam_assert_not_equal_long(long int expected, long int result,
+                                 const char *file, int32_t line) {
+  if (expected == result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf(
+          "  %sExpected \"%ld\" and result \"%ld\" should not be the same%s\n",
+          RED, expected, result, NONE);
+    } else {
+      printf("%s%s [ %s%ld%s == %s%ld%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
+void _exam_assert_not_equal_ulong(unsigned long int expected,
+                                  unsigned long int result, const char *file,
+                                  int32_t line) {
+  if (expected == result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf(
+          "  %sExpected \"%lu\" and result \"%lu\" should not be the same%s\n",
+          RED, expected, result, NONE);
+    } else {
+      printf("%s%s [ %s%lu%s == %s%lu%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
+void _exam_assert_not_equal_long_long(long long expected, long long result,
+                                      const char *file, int32_t line) {
+  if (expected == result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf("  %sExpected \"%lld\" and result \"%lld\" should not be the "
+             "same%s\n",
+             RED, expected, result, NONE);
+    } else {
+      printf("%s%s [ %s%lld%s == %s%lld%s ] ", RED, NONE, GREEN, expected,
+             NONE, RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
+void _exam_assert_not_equal_ulong_long(unsigned long long expected,
+                                       unsigned long long result,
+                                       const char *file, int32_t line) {
+  if (expected == result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf("  %sExpected \"%llu\" and result \"%llu\" should not be the "
+             "same%s\n",
+             RED, expected, result, NONE);
+    } else {
+      printf("%s%s [ %s%llu%s == %s%llu%s ] ", RED, NONE, GREEN, expected,
+             NONE, RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
+void _exam_assert_not_equal_char(char expected, char result, const char *file,
+                                 int32_t line) {
+  if (expected == result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf("  %sExpected \'%c\' and result \'%c\' should not be the "
+             "same%s\n",
+             RED, expected, result, NONE);
+    } else {
+      printf("%s%s [ %s%c%s == %s%c%s ] ", RED, NONE, GREEN, expected, NONE,
              RED, result, NONE);
     }
     siglongjmp(global_sig, 1);
@@ -622,10 +815,10 @@ void _exam_assert_not_equal_str(const char *expected, const char *result,
   if (strcmp(expected, result) == 0) {
     if (!global_env.shortd) {
       printf("  Error at line: %s:%d\n", file, line);
-      printf("  %sExpected: %s %sResult: %s%s\n", GREEN, expected, RED, result,
-             NONE);
+      printf("  %sExpected \"%s\" and result \"%s\" should not be the same%s\n",
+             RED, expected, result, NONE);
     } else {
-      printf("%s%s [ %s%s%s != %s%s%s ] ", RED, NONE, GREEN, expected, NONE,
+      printf("%s%s [ %s%s%s == %s%s%s ] ", RED, NONE, GREEN, expected, NONE,
              RED, result, NONE);
     }
     siglongjmp(global_sig, 1);
@@ -662,10 +855,10 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
       }
     }
     if (!global_env.shortd) {
-      printf("  %zu bytes of %p and %p are same\n", differences, (void *)a,
+      printf("  %zu bytes of %p and %p are the same\n", differences, (void *)a,
              (void *)b);
     } else {
-      printf("%s%s [%zu bytes differ] ", RED, NONE, differences);
+      printf("%s%s [%zu bytes are the same] ", RED, NONE, differences);
     }
 
     siglongjmp(global_sig, 1);
