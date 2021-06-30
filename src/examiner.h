@@ -29,8 +29,14 @@ typedef struct {
 } exam_test_table_t;
 
 typedef struct {
+  const char **data;
+  size_t len;
+  size_t cap;
+} exam_filter_t;
+
+typedef struct {
   exam_test_table_t tbl;
-  const char *filter;
+  exam_filter_t filter;
   const char *(*color)(int32_t);
   int32_t longest_name_len;
   int32_t repeat;

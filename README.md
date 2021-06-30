@@ -17,7 +17,8 @@ one executable. It should execute all tests without additional setup or header
 files. See makefile and `test` directory for an example
 - parsing argc argv for parameter options
   - filter for test with `--filter pattern`, possible to only filter for a scope
-  thanks to prefix matching
+  thanks to prefix matching. Multiple `--filter` will act like an or, so only
+  one filter needs to match in order to get a test to execute.
   - list all tests with `--list-tests`
   - short output with `--short`
   - shuffle test order with `--shuffle`

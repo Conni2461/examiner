@@ -22,18 +22,34 @@ static char *exam_concat_scope_name(const exam_test_t *test) {
   return buf;
 }
 
-static bool exam_filter_test(const char *name, const char *filter) {
-  int32_t i = 0;
-  while (true) {
-    if (filter[i] == '\0') {
-      break;
+static void exam_append_filter(const char *str) {
+  exam_filter_t *filter = &global_env.filter;
+  if (filter->data == NULL) {
+    filter->cap = 4;
+    filter->data = malloc(sizeof(char **) * filter->cap);
+    filter->len = 0;
+  } else {
+    if (filter->len + 1 >= filter->cap) {
+      filter->cap *= 2;
+      filter->data = realloc(filter->data, sizeof(char **) * filter->cap);
     }
-    if (name[i] != filter[i]) {
-      return false;
-    }
-    ++i;
   }
-  return true;
+  filter->data[filter->len++] = str;
+}
+
+static bool exam_filter_test(const char *name, const exam_filter_t *filter) {
+  for (size_t i = 0; i < filter->len; ++i) {
+    const char *str = filter->data[i];
+    for (size_t j = 0;; ++j) {
+      if (str[j] == '\0') {
+        return true;
+      }
+      if (name[j] == '\0' || name[j] != str[j]) {
+        break;
+      }
+    }
+  }
+  return false;
 }
 
 #define NONE global_env.color(0)
@@ -98,9 +114,8 @@ static void exam_print_ok(const char *name, double diff) {
 static void exam_print_failed(const char *name) {
   if (!global_env.shortd) {
     printf("%s[  FAILED  ] %s%s\n", RED, NONE, name);
-  } else {
-    // for short: failing will be indicated in the assert
   }
+  // for short: failing will be indicated in the assert
 }
 
 static void exam_print_passed_scope(size_t passed, const char *name,
@@ -161,12 +176,15 @@ static void free_exam_env() {
   if (global_env.tbl.scope) {
     free(global_env.tbl.scope);
   }
+  if (global_env.filter.data) {
+    free(global_env.filter.data);
+  }
 }
 
 void exam_init(int32_t argc, char **argv) {
   srand((uint32_t)time(NULL));
 
-  global_env.filter = NULL;
+  global_env.filter = (exam_filter_t){0};
   global_env.color = &colored_matcher;
   global_env.longest_name_len = 0;
   global_env.repeat = 1;
@@ -186,8 +204,7 @@ void exam_init(int32_t argc, char **argv) {
           free_exam_env();
           exit(1);
         }
-        // TODO(conni2461): Allow to filter more than onces
-        global_env.filter = argv[++i];
+        exam_append_filter(argv[++i]);
       } else if (strncmp(argv[i], "--shuffle", 9) == 0) {
         global_env.shuffle = true;
       } else if (strncmp(argv[i], "--repeat", 8) == 0) {
@@ -225,20 +242,24 @@ void exam_init(int32_t argc, char **argv) {
         }
       } else if (strncmp(argv[i], "--help", 6) == 0 ||
                  strncmp(argv[i], "-h", 2) == 0) {
-        printf("%s [options]\n"
-               "  --list-tests      only list all tests\n"
-               "  --short           short output\n"
-               "  --filter [str]    filter for one or many tests (substr "
-               "matching)\n"
-               "  --shuffle         shuffle test execution order\n"
-               "  --repeat [n]      repeat all tests n times\n"
-               "  --die-on-fail     stop execution on failure\n"
-               "\n"
-               "  --color [on, off] color output. Default: on\n"
-               "\n"
-               "  -h | --help       print help page\n"
-               "  -v | --version    print software version\n",
-               argv[0]);
+        printf(
+            "%s [options]\n"
+            "  --list-tests      only list all tests\n"
+            "  --short           short output\n"
+            "  --filter [str]    filter for one or many tests (substr "
+            "matching)\n"
+            "                    multiple filters will behave like an or, so \n"
+            "                    only one filter needs to match in order to get"
+            "\n                    get the test executed.\n"
+            "  --shuffle         shuffle test execution order\n"
+            "  --repeat [n]      repeat all tests n times\n"
+            "  --die-on-fail     stop execution on failure\n"
+            "\n"
+            "  --color [on, off] color output. Default: on\n"
+            "\n"
+            "  -h | --help       print help page\n"
+            "  -v | --version    print software version\n",
+            argv[0]);
         free_exam_env();
         exit(0);
       } else if (strncmp(argv[i], "--version", 8) == 0 ||
@@ -264,11 +285,11 @@ int32_t exam_run() {
     if (scope_name_len > global_env.longest_name_len) {
       global_env.longest_name_len = (int32_t)scope_name_len;
     }
-    if (global_env.filter != NULL || global_env.list) {
+    if (global_env.filter.len > 0 || global_env.list) {
       for (size_t j = 0; j < global_env.tbl.scope[i].len; ++j) {
         char *buf = exam_concat_scope_name(&global_env.tbl.scope[i].tests[j]);
-        if (global_env.filter != NULL) {
-          if (exam_filter_test(buf, global_env.filter)) {
+        if (global_env.filter.len > 0) {
+          if (exam_filter_test(buf, &global_env.filter)) {
             if (global_env.list) {
               printf("%s\n", buf);
             }
@@ -308,12 +329,14 @@ int32_t exam_run() {
         current_test = &global_env.tbl.scope[ii].tests[j];
       }
       char *buf = exam_concat_scope_name(current_test);
-      if (global_env.filter != NULL &&
-          !exam_filter_test(buf, global_env.filter)) {
+      if (global_env.filter.len > 0 &&
+          !exam_filter_test(buf, &global_env.filter)) {
         free(buf);
         continue;
       }
       if (!printed_scope) {
+        // TODO(conni2461): If i filter for one test in a scope this will show
+        // the wrong count
         exam_print_running_test(global_env.tbl.scope[ii].len,
                                 global_env.tbl.scope[ii].name);
         printed_scope = true;
