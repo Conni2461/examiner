@@ -2,7 +2,7 @@ TARGET ?= libexaminer.so
 
 BUILD_DIR ?= ./build
 
-CFLAGS ?= -Wall -Werror -fpic -Wshadow -Wconversion
+CFLAGS ?= -Wall -Werror -Wshadow -Wconversion
 TYPE ?= -O2
 
 ifeq ($(PREFIX),)
@@ -13,7 +13,7 @@ all: $(BUILD_DIR)/$(TARGET) $(BUILD_DIR)/test
 
 $(BUILD_DIR)/$(TARGET): src/examiner.c src/examiner.h
 	mkdir -p $(BUILD_DIR)
-	$(CC) $(TYPE) $(CFLAGS) -shared src/examiner.c -o $(BUILD_DIR)/$(TARGET)
+	$(CC) $(TYPE) $(CFLAGS) -fpic -shared src/examiner.c -o $(BUILD_DIR)/$(TARGET)
 
 $(BUILD_DIR)/test: build/$(TARGET) test/main.c test/math_test.c test/each_test.c test/boolean_test.c test/str_test.c test/mem_test.c test/pending_test.c
 	$(CC) $(TYPE) $(CFLAGS) \
