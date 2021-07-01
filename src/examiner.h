@@ -141,10 +141,6 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
 
 // clang-format off
 #define ASSERT_EQUAL(expected, result)                                         \
-  _Static_assert(                                                              \
-    __ISTYPE(expected, typeof(result)),                                        \
-    "'expected' and 'result' need to be from the same type!"                   \
-  );                                                                           \
   (                                                                            \
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, double), _exam_assert_equal_double,                   \
@@ -166,14 +162,12 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
       __ISTYPE(expected, char), _exam_assert_equal_char,                       \
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, char[]), _exam_assert_equal_str,                      \
-    (void)0))))))))))                                                          \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, char*), _exam_assert_equal_str,                       \
+    (void)0)))))))))))                                                         \
   (expected, result, __FILE__, __LINE__))
 
 #define ASSERT_NOT_EQUAL(expected, result)                                     \
-  _Static_assert(                                                              \
-    __ISTYPE(expected, typeof(result)),                                        \
-    "'expected' and 'result' need to be from the same type!"                   \
-  );                                                                           \
   (                                                                            \
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, double), _exam_assert_not_equal_double,               \
@@ -196,7 +190,9 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
       __ISTYPE(expected, char), _exam_assert_not_equal_char,                   \
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, char[]), _exam_assert_not_equal_str,                  \
-    (void)0))))))))))                                                          \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, char*), _exam_assert_not_equal_str,                   \
+    (void)0)))))))))))                                                         \
   (expected, result, __FILE__, __LINE__))
 // clang-format on
 
