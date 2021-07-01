@@ -126,10 +126,10 @@ static void exam_print_passed_scope(size_t passed, const char *name,
   }
 }
 
-static void exam_print_passed_result(size_t passed) {
+static void exam_print_passed_result(size_t passed, double diff) {
   if (!global_env.shortd) {
-    printf("%s[  PASSED  ] %zu test(s) across all scopes%s\n", GREEN, passed,
-           NONE);
+    printf("%s[  PASSED  ] %zu test(s) across all scopes%s [%.2f s]\n", GREEN,
+           passed, NONE, diff);
   }
 }
 
@@ -312,6 +312,7 @@ int32_t exam_run() {
 
   size_t *scopes_indices = exam_create_shuffle(global_env.tbl.len);
   exam_print_running_all(count);
+  double diff_all = 0.0;
   for (size_t i = 0; i < global_env.tbl.len; ++i) {
     size_t ii = i;
     if (global_env.shuffle) {
@@ -320,7 +321,7 @@ int32_t exam_run() {
     bool printed_scope = false;
     size_t scope_passed = 0;
     size_t *tests_indices = exam_create_shuffle(global_env.tbl.scope[ii].len);
-    clock_t start_scope = clock();
+    double diff_scope = 0.0;
     for (size_t j = 0; j < global_env.tbl.scope[ii].len; ++j) {
       exam_test_t *current_test = NULL;
       if (global_env.shuffle) {
@@ -348,7 +349,7 @@ int32_t exam_run() {
       }
       if (sigsetjmp(global_sig, 1) == 0) {
         exam_print_run(buf);
-        double diff;
+        double diff = 0;
         for (size_t k = 0; k < global_env.repeat; ++k) {
           if (global_env.tbl.scope[ii].before != NULL) {
             global_env.tbl.scope[ii].before();
@@ -356,7 +357,7 @@ int32_t exam_run() {
           clock_t start = clock();
           current_test->fn();
           clock_t end = clock();
-          diff = ((double)(end - start)) / CLOCKS_PER_SEC;
+          diff += ((double)(end - start)) / CLOCKS_PER_SEC;
           if (global_env.tbl.scope[ii].after != NULL) {
             global_env.tbl.scope[ii].after();
           }
@@ -364,6 +365,8 @@ int32_t exam_run() {
         ++passed;
         ++scope_passed;
         exam_print_ok(buf, diff);
+        diff_scope += diff;
+        diff_all += diff;
       } else {
         exam_print_failed(buf);
         retValue = 1;
@@ -378,16 +381,15 @@ int32_t exam_run() {
       free(buf);
     }
     if (printed_scope) {
-      clock_t end_scope = clock();
-      double diff = ((double)(end_scope - start_scope)) / CLOCKS_PER_SEC;
-      exam_print_passed_scope(scope_passed, global_env.tbl.scope[i].name, diff);
+      exam_print_passed_scope(scope_passed, global_env.tbl.scope[i].name,
+                              diff_scope);
       printf("\n");
     }
     exam_free_shuffle(tests_indices);
   }
   exam_free_shuffle(scopes_indices);
 
-  exam_print_passed_result(passed);
+  exam_print_passed_result(passed, diff_all);
   exam_print_final(count);
 
   free_exam_env();
