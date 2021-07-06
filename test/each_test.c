@@ -11,13 +11,13 @@ AFTER_EACH(each) {
 }
 
 TEST(each, a) {
-  ASSERT_EQUAL(2, __each);
+  ASSERT_EQ(2, __each);
 }
 
 TEST(each, b) {
-  ASSERT_EQUAL(3, __each);
+  ASSERT_EQ(3, __each);
 }
 
 TEST(each, c) {
-  ASSERT_EQUAL(4, __each);
+  ASSERT_EQ(4, __each);
 }

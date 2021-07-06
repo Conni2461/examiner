@@ -5,7 +5,7 @@ A small, opinionated c unit testing framework.
 ## Features
 
 - Autoregister tests
-- `ASSERT_EQUAL` and `ASSERT_NOT_EQUAL` macros that dispatches a compare to the
+- `ASSERT_EQ` and `ASSERT_NE` macros that dispatches a compare to the
 appropriated type
 - `BEFORE_EACH` and `AFTER_EACH` to register functions that run before and/or
 after a scope
@@ -47,16 +47,16 @@ sudo make uninstall # to remove it again
  *  tests.
  */
 TEST(math, test_int) {
-  /** ASSERT_EQUAL and ASSERT_NOT_EQUAL are two macros that will dispatch based
-   *  on the type to internal comparator functions. It dispatches
+  /** ASSERT_EQ and ASSERT_NE are two macros that will dispatch based on the
+   *  type to internal comparator functions. It dispatches
    *  `int32_t`, `uint32_t`,
    *  `long int`, `unsigned long int`,
    *  `long long`, `unsigned long long`,
    *  `float`, `double`,
    *  `char`, `char *`
    */
-  ASSERT_EQUAL(1, 1);
-  ASSERT_NOT_EQUAL(1, 2);
+  ASSERT_EQ(1, 1);
+  ASSERT_NE(1, 2);
 }
 
 /**
@@ -73,8 +73,8 @@ AFTER_EACH(math) {
 }
 
 TEST(str, test) {
-  ASSERT_EQUAL("test", "test");
-  ASSERT_NOT_EQUAL("test", "nest");
+  ASSERT_EQ("test", "test");
+  ASSERT_NE("test", "nest");
 }
 
 /**
@@ -82,13 +82,13 @@ TEST(str, test) {
  * implemented yet so the test will not be executed.
  */
 PENDING(pending, should_fail) {
-  ASSERT_EQUAL("a", "b");
+  ASSERT_EQ("a", "b");
 }
 
 /**
  * Also awailable are:
- * ASSERT_EQUAL_MEM
- * ASSERT_NOT_EQUAL_MEM
+ * ASSERT_EQ_MEM
+ * ASSERT_NE_MEM
  * ASSERT_TRUE
  * ASSERT_FALSE
  */

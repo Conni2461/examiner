@@ -140,7 +140,7 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
 #define __ISTYPE(x, t) __builtin_types_compatible_p(typeof(x), t)
 
 // clang-format off
-#define ASSERT_EQUAL(expected, result)                                         \
+#define ASSERT_EQ(expected, result)                                            \
   (                                                                            \
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, double), _exam_assert_equal_double,                   \
@@ -167,7 +167,7 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
     (void)0)))))))))))                                                         \
   (expected, result, __FILE__, __LINE__))
 
-#define ASSERT_NOT_EQUAL(expected, result)                                     \
+#define ASSERT_NE(expected, result)                                            \
   (                                                                            \
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, double), _exam_assert_not_equal_double,               \
@@ -196,10 +196,10 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
   (expected, result, __FILE__, __LINE__))
 // clang-format on
 
-#define ASSERT_EQUAL_MEM(expected, result, len)                                \
+#define ASSERT_EQ_MEM(expected, result, len)                                   \
   _exam_assert_equal_mem(expected, result, len, __FILE__, __LINE__)
 
-#define ASSERT_NOT_EQUAL_MEM(expected, result, len)                            \
+#define ASSERT_NE_MEM(expected, result, len)                                   \
   _exam_assert_not_equal_mem(expected, result, len, __FILE__, __LINE__)
 
 #endif // EXAMINER_H
