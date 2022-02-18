@@ -653,6 +653,21 @@ void _exam_assert_equal_str(const char *expected, const char *result,
   }
 }
 
+void _exam_assert_equal_ptr(void *expected, void *result, const char *file,
+                            int32_t line) {
+  if (expected != result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf("  %sExpected: %p %sResult: %p%s\n", GREEN, expected, RED, result,
+             NONE);
+    } else {
+      printf("%s%s [ %s%p%s != %s%p%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
 void _exam_assert_equal_mem(void *expected, void *result, size_t len,
                             const char *file, int32_t line) {
   const char *a = (const char *)expected;
@@ -844,6 +859,22 @@ void _exam_assert_not_equal_str(const char *expected, const char *result,
              RED, expected, result, NONE);
     } else {
       printf("%s%s [ %s%s%s == %s%s%s ] ", RED, NONE, GREEN, expected, NONE,
+             RED, result, NONE);
+    }
+    siglongjmp(global_sig, 1);
+  }
+}
+
+void _exam_assert_not_equal_ptr(void *expected, void *result, const char *file,
+                                int32_t line) {
+  if (expected == result) {
+    if (!global_env.shortd) {
+      printf("  Error at line: %s:%d\n", file, line);
+      printf("  %sExpected \'%p\' and result \'%p\' should not be the "
+             "same%s\n",
+             RED, expected, result, NONE);
+    } else {
+      printf("%s%s [ %s%p%s == %s%p%s ] ", RED, NONE, GREEN, expected, NONE,
              RED, result, NONE);
     }
     siglongjmp(global_sig, 1);

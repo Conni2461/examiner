@@ -109,6 +109,8 @@ void _exam_assert_equal_char(char expected, char result, const char *file,
                              int32_t line);
 void _exam_assert_equal_str(const char *expected, const char *result,
                             const char *file, int32_t line);
+void _exam_assert_equal_ptr(void *expected, void *result, const char *file,
+                            int32_t line);
 void _exam_assert_equal_mem(void *expected, void *result, size_t len,
                             const char *file, int32_t line);
 
@@ -134,6 +136,8 @@ void _exam_assert_not_equal_char(char expected, char result, const char *file,
                                  int32_t line);
 void _exam_assert_not_equal_str(const char *expected, const char *result,
                                 const char *file, int32_t line);
+void _exam_assert_not_equal_ptr(void *expected, void *result, const char *file,
+                                int32_t line);
 void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
                                 const char *file, int32_t line);
 
@@ -164,7 +168,9 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
       __ISTYPE(expected, char[]), _exam_assert_equal_str,                      \
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, char*), _exam_assert_equal_str,                       \
-    (void)0)))))))))))                                                         \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, void*), _exam_assert_equal_ptr,                       \
+    (void)0))))))))))))                                                        \
   (expected, result, __FILE__, __LINE__))
 
 #define ASSERT_NE(expected, result)                                            \
@@ -192,7 +198,9 @@ void _exam_assert_not_equal_mem(void *expected, void *result, size_t len,
       __ISTYPE(expected, char[]), _exam_assert_not_equal_str,                  \
     __builtin_choose_expr(                                                     \
       __ISTYPE(expected, char*), _exam_assert_not_equal_str,                   \
-    (void)0)))))))))))                                                         \
+    __builtin_choose_expr(                                                     \
+      __ISTYPE(expected, void*), _exam_assert_not_equal_ptr,                   \
+    (void)0))))))))))))                                                        \
   (expected, result, __FILE__, __LINE__))
 // clang-format on
 
