@@ -1,0 +1,12 @@
+# Package Information for pkg-config
+
+prefix=/usr
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: examiner
+Version: @@VER@@
+Description: A small, opinionated c unit testing framework
+URL: https://github.com/Conni2461/examiner
+Cflags: -I${includedir}
+Libs: -L${libdir} -lexaminer
