@@ -125,3 +125,25 @@ LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib ./test --help
 LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib ./test --filter math
 LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib ./test --filter math.test_int
 ```
+
+This can also be used in cmake projects: either clone this repository and do
+
+```cmake
+add_subdirectory(examiner)
+target_link_libraries(your_target PRIVATE examiner)
+```
+
+or install cmake config files
+
+```bash
+cmake -B build
+cmake --build build
+sudo cmake --install build --prefix /usr/local
+```
+
+and use `find_package`:
+
+```cmake
+find_package(examiner REQUIRED)
+target_link_libraries(your_target PRIVATE examiner)
+```
